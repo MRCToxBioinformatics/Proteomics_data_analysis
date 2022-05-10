@@ -17,6 +17,22 @@ knitr::opts_chunk$set(
 
 ```
 
+
+## Preamble
+
+Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC) is a form of quantitative proteomics where different conditions are quantified in the same run by differential metabolic labelling of proteins using amino acids containing stable isotopes [@http://zotero.org/users/5634351/items/ST368TPT]. A typical SILAC experiment involved growing cells in two different types of SILAC media, one containing 'light' arginine and lysine, and the other containing 'heavy' arginine and lysine. Over time the cells incorporate these amino acids into their proteins, changing the mass of the peptides detected by LC-MS. The two pools of cells can then be used to compare e.g two experimental conditions.
+
+<figure>
+  <img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="50%">
+  <figcaption>The principle of SILAC. Source: https://www.creative-proteomics.com/blog/index.php/stable-isotope-labeling-using-amino-acids-in-cell-culture-silac-principles-workflow-and-applications </figcaption>
+</figure> 
+
+SILAC was initially designed to provide pairwise comparisons between cell cultures, but has now been extended to more than two labels and even whole organisms [@http://zotero.org/users/5634351/items/6HPNEJ3F].
+
+This elegant experimental design enables quantification of peptide/protein abundance ratios between conditions with very little technical variation, since the samples from separate conditions are pooled as early as possible in the sample handling process. For example, cell cultures can be treated with drug/control and then collected and pooled together for all downstream protocol steps. The use of different isotope labels has been extended to study the protein turnover (e.g switch from one label to another) in pulsed SILAC, and relative turnover between conditions (e.g two condition on the same label and then switch each condition to a different label; requires triple SILAC). 
+
+The analysis of SILAC data is relatively straightforward, since technical noise is low and normalisation is not normally required. Typically, one is interested in the intensity (peak area or peak height depending on your PD settings) ratio of the light (L) and heavy (H) MS peaks for a given peptide. This ratio forms the quantification value which we wish to perform statistical tests and exploratory analysis on.
+
 ### Load dependencies
 
 Load the required libraries.
@@ -35,70 +51,58 @@ library(tibble)
 
 ```
 
-
-## Preamble
-
-Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC) is a form of quantitative proteomics where different conditions are quantified in the same run by differential metabolic labelling of proteins using amino acids containing stable isotopes [@http://zotero.org/users/5634351/items/ST368TPT]. A typical SILAC experiment involved growing cells in two different types of SILAC media, one containing 'light' arginine and lysine, and the other containing 'heavy' arginine and lysine. Over time the cells incorporate these amino acids into their proteins, changing the mass of the peptides detected by LC-MS. SILAC was initially designed to provide pairwise comparisons between cell cultures, but has now been extended to more than two labels and even whole organisms [@http://zotero.org/users/5634351/items/6HPNEJ3F].
-
-This elegant experimental design enables quantification of peptide/protein abundance ratios between conditions with very little technical variation, since the samples from separate conditions are pooled as early as possible in the sample handling process. For example, cell cultures can be treated with drug/control and then collected and pooled together for all downstream protocol steps. The use of different isotope labels has been extended to study the protein turnover (e.g switch from one label to another) in pulsed SILAC, and relative turnover between conditions (e.g two condition on the same label and then switch each condition to a different label; requires triple SILAC).
-
-The analysis of SILAC data is relatively straightforward, since technical noise is low and normalisation is not normally required. Typically, one is interested in the intensity (peak area or peak height depending on your PD settings) ratio of the light (L) and heavy (H) MS peaks for a given peptide. This ratio forms the quantification value which we wish to perform statistical tests and exploratory analysis on.
-
-
-## Asssessing the SILAC isotope incorporation rate
-
-Before performing a typical SILAC experiment, it is necessary to confirm complete (e.g > 95%) incorporation of the supplemented isotopically labelled amino acids into the cellular
-proteome. 
-
-We do this with `camprotR::estimate_incorporation()` function below, which wraps multiple `camprotR` functions to parse and filter the input data and then estimate the incorporation at peptide and protein level. 
-
-Calculating the incorporation for a given peptide is simple, e.g  H/(H+L)  for a typical two label experiment. However, for very highly incorporated samples, the true intensity of the L peptide ions will be close to zero, which can lead to erroneous assignment of other ions to the L peptide. `estimate_incorporation()` also supports the calculation of incorporation from defined mixes of heavy and light labelled material, which makes the estimation of incorporation rate more robust, since both isotopes should exist for all peptides. Here, heavy and light labelled cells were mixed 1:1. 
-
-Importantly, note that there is a good correlation between the light and heavy intensities, regardless whether either or both isotopes were from a spectrum match, or one peptide isotope was identified based on the expected 'mass shift' relative to the peptide-spectrum match (PSM) for the cognate isotope. This indicates that identified isotope pairs are correct and the the quantification values are trustable. 
-
-
-```{r, fig.height=3, fig.width=6, message=FALSE}
-# The cRAP fasta file for this experiment is part of the Proteomics.analysis.data package.
-# For a real experiment, make sure to the use the same cRAP fasta that was used in PD
-crap_fasta_inf <- system.file(
-  "extdata", "cRAP_20190401.fasta.gz", 
-  package = "Proteomics.analysis.data"
-)
-
-# psm_silac_p4 and pep_silac_p4 are loaded from the `camprotR` package 
-incorporation_results <- camprotR::estimate_incorporation(
-  # can replace with PD output using read.delim(PSMs.txt)
-  psm_input = psm_silac_p4, 
-  # can replace with PD output using read.delim(PeptideGroups.txt)
-  peptide_input = pep_silac_p4, 
-  crap_fasta = crap_fasta_inf,
-  mix = 1 # This incorporation test was performed with a 1:1 H/L mix
-)
-
-print(incorporation_results$HL_correlation)
-```
-
-
-The median observed incorporation for the mixed sample is 50.8 at the peptide-level and 50.5 at the protein level. Correcting for the mixing proportions this gives us incorporation rate estimates just over 100%, which suggests the true incorporation rate is likely to be very close to 100%. We are only using a toy data set here with 100 proteins. With the full data, we would get a more accurate estimate.
-
-```{r, fig.height=4, fig.width=4, message=FALSE}
-print(incorporation_results$peptide_incorporation)
-print(incorporation_results$protein_incorporation)
-```
+Typically, the incorporation rate testing will be performed for you by the Proteomics service. However, should you wish to do this yourself, see [Asssessing the SILAC isotope incorporation rate](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
 
 
 ## Processing and QC of SILAC experimental data
 
-Now, onto some experimental data. Here, we process data from an OOPS [@http://zotero.org/users/5634351/items/EJHWF46N] experiment designed to identify proteins that are significantly enriched upon UV crosslinking (CL) vs non-crosslinked control cells (NC). RNA-binding proteins (RBPs) should be much more abundant in CL samples, since this covalently crosslinks the RBPs to RNA, and retains them in the OOPS interface, from which the sample is taken. 
+Here, we will use data from an OOPS [@http://zotero.org/users/5634351/items/EJHWF46N] experiment designed to identify proteins that are significantly enriched upon UV crosslinking (CL) vs non-crosslinked control cells (NC). RNA-binding proteins (RBPs) should be much more abundant in CL samples, since this covalently crosslinks the RBPs to RNA, and retains them in the OOPS interface, from which the sample is taken. 
 
 In total, we have 4 SILAC runs, representing 4 separate plates of U-2 OS cells. Two plates (replicate 1 & 2) were Heavy for CL and two plates (replicates 3 & 4) were Light for CL. This is called a 'label' swap/switch and helps to ensure the results are independent of the labelling scheme.
 
-The first step is to read in the data. As part of this, we will remove contaminant proteins and features without quantification data. These were defined using the cRAP database. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+Below, we define the filepaths for the 'PeptideGroup.txt' files we will use. These are part the Proteomics.analysis.data package - their complete filepath can be identified using `system.file`
+```{r}
+# These files are part the Proteomics.analysis.data package
+replicates <- 1:4
+pep_infiles <- file.path('OOPS_SILAC', paste0('OOPS_', replicates, '_PeptideGroups.txt'))
+names(pep_infiles) <- replicates
+
+print(pep_infiles)
+```
+
+Below, we read in one PeptideGroups.txt file and print the column names. 
+```{r}
+infdata <- read.delim(system.file("extdata", pep_infiles[[1]], package = "Proteomics.analysis.data"))
+print(colnames(infdata))
+```
+
+
+> ### Exercise 1
+>
+> Examine the column names and answer the following:
+>
+> 1. What's do you the difference is between "Protein.Accessions" and "Master.Protein.Accessions"?
+> 2. What columns contain the abundances for the the Light and Heavy-labelled samples?
+> 3. How do the Light and Heavy samples relatea to the conditions (UV crosslinking +/-)?
+
+### Solution
+```{r class.source = 'fold-hide'}
+# 1. Protein.Accessions are all the proteins a sequence can match to.
+# Master.Protein.Accessions are the master protein(s) that a peptide is deemed 
+# to be most likely to originate from.
+# 2. "Abundance.F26.Light.Sample" & "Abundance.F26.Heavy.Sample"
+# 3. It's not possible to tell! We'll deal with this later.
+```
+
+Your PD output may have additional columns. For example, if all your SILAC samples were simultaneously processed in PD, you will have a 'Light' and 'Heavy' column for each one.
+
+### Parse PeptideGroups.txt files
+To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. As part of this, we will remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the cRAP database and we need to obtain their accessions. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
 
 ```{r}
-# Load the cRAP FASTA used for the PD search
+# Load the cRAP FASTA used for the PD search. For your experiment,
+# make sure you're using the same file as used in the PD workflow
 crap_fasta <- Biostrings::fasta.index(crap_fasta_inf, seqtype = "AA")
-
 
 # Extract the non-cRAP UniProt accessions associated with each cRAP protein
 crap_accessions <- crap_fasta %>% 
@@ -110,14 +114,6 @@ crap_accessions <- crap_fasta %>%
 
 We can then supply these cRAP protein IDs to `camprotR::parse_features` which will parse the PD output and remove features which may originate from contaminants, as well as features which don't have a unique master protein. See `?parse_features` for further details, including the removal of 'associated cRAP'. `parse_features` will output messages about the number of features at each stage in the filtering.
 
-```{r}
-# These files are part the Proteomics.analysis.data package
-replicates <- 1:4
-pep_infiles <- file.path('OOPS_SILAC', paste0('OOPS_', replicates, '_PeptideGroups.txt'))
-names(pep_infiles) <- replicates
-
-print(pep_infiles)
-```
 
 ```{r, message=FALSE}
 # We use lapply below to run the same function on each element of the list pep_data
@@ -139,8 +135,8 @@ pep_data_parsed <- lapply(
 
 
 
-
-Next, we add new columns to describe the intensities with respect to the CL and NC conditions, based on how H & L map to CL & NC for each replicate.
+### Annotate with experimental conditions
+Next, we add new columns to describe the intensities with respect to the CL and NC conditions, based on how H & L map to CL & NC for each replicate. We will also subset to only those columns we need.
 
 ```{r}
 
@@ -184,12 +180,14 @@ names(annot_pep_data_parsed) <- names(pep_data_parsed)
 ```
 
 
-Now that we have added the replicate number as a column, we can bind together the rows from all replicates to keep all our data in a single `data.frame`. 
+Now that we have added the replicate number as a column, we can bind together the rows from all replicates to keep all our data in a single `data.frame`.
 
 ```{r}
 abundance_data_complete <- do.call('rbind', annot_pep_data_parsed) %>% 
   remove_rownames()
 ```
+
+### Calculate ratios
 
 Next, we calculate the CL/NC ratio using `camprotR::get_ratio`, which will also add a `missing` column to describe whether one of the quantification values is missing. `camprotR::get_ratio` expects the quantification values to be on a log scale.
 ```{r}
@@ -199,6 +197,7 @@ ratios <- abundance_data_complete %>%
   get_ratio(CL, NC, bind = TRUE) # Obtain CL/NC ratio
 ```
 
+### Missing values
 
 Below, we tally and plot the missing values per replicate for each method. Note that ~40% of peptides have a missing quantification value and it's much more likely to be missing in NC than CL. This is what we expect since the OOPS method is designed to capture RBPs that are UV crosslinked to RNA, so without crosslinking, there should be very little protein present in the interface.
 
@@ -218,7 +217,7 @@ missing_tallies %>%
 ```
 
 
-> ### Exercise 1
+> ### Exercise 3
 >
 > Modify the code above so that rather than showing one bar each for every
 > level of missing status, it shows a stacked bar for each replicate, where the fill
@@ -239,7 +238,7 @@ missing_tallies %>%
 ```
 
 
-
+### Use the PSM files to summarise spectrum matches for each quantification value.
 
 Given the large number of missing values, there is a concern that protein abundance in NC may be very low. Therefore, NC peptides identified by mass shift rather than peptide spectrum matching could be incorrect. Note that peptide sequences identified by PSM are referred to as having been 'matched' in some code blocks below.
 
@@ -256,6 +255,7 @@ Below we use `camprotR::silac_psm_seq_int` to identify which quantification valu
 ```{r,message=FALSE}
 psm_matched_data <- lapply(
   psm_infiles, function(infile) {
+    # Read in the PSM file
     infdata <- read.delim(
       system.file("extdata", infile, package = "Proteomics.analysis.data"))
     
@@ -264,6 +264,7 @@ psm_matched_data <- lapply(
     # Below, we convert the Annotated.Sequence column into a Sequence column
     infdata$Sequence <- toupper(infdata$Annotated.Sequence)
     
+    # Summarise spectrum matches for each peptide
     camprotR::silac_psm_seq_int(infdata, sequence_col = 'Sequence')
   }
 )

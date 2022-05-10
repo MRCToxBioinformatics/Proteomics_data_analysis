@@ -1,0 +1,69 @@
+---
+title: "Asssessing the SILAC isotope incorporation rate"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+```
+
+
+Before performing a typical SILAC experiment, it is necessary to confirm complete (e.g > 95%) incorporation of the supplemented isotopically labelled amino acids into the cellular
+proteome. 
+
+Here, we do this with the `camprotR::estimate_incorporation()` function, which wraps multiple `camprotR` functions to parse and filter the input data and then estimate the incorporation at peptide and protein level. 
+
+Calculating the incorporation for a given peptide is simple, e.g  H/(H+L)  for a typical two label experiment. However, for very highly incorporated samples, the true intensity of the L peptide ions will be close to zero, which can lead to erroneous assignment of other ions to the L peptide. `estimate_incorporation()` also supports the calculation of incorporation from defined mixes of heavy and light labelled material, which makes the estimation of incorporation rate more robust, since both isotopes should exist for all peptides. Here, heavy and light labelled cells were mixed 1:1. 
+
+### Load dependencies
+
+Load the required libraries.
+
+```{r, message=FALSE, warning=FALSE}
+library(Proteomics.analysis.data)
+library(camprotR)
+
+```
+
+
+
+
+```{r, fig.height=3, fig.width=6, message=FALSE}
+# The cRAP fasta file for this experiment is part of the Proteomics.analysis.data package.
+# For a real experiment, make sure to the use the same cRAP fasta that was used in PD
+crap_fasta_inf <- system.file(
+  "extdata", "cRAP_20190401.fasta.gz", 
+  package = "Proteomics.analysis.data"
+)
+
+# psm_silac_p4 and pep_silac_p4 are loaded from the `camprotR` package 
+incorporation_results <- camprotR::estimate_incorporation(
+  # can replace with PD output using read.delim(PSMs.txt) from your experiment
+  psm_input = psm_silac_p4, 
+  # can replace with PD output using read.delim(PeptideGroups.txt) from your experiment
+  peptide_input = pep_silac_p4, 
+  crap_fasta = crap_fasta_inf,
+  mix = 1 # This incorporation test was performed with a 1:1 H/L mix
+)
+
+print(incorporation_results$HL_correlation)
+```
+
+Importantly, note that there is a good correlation between the light and heavy intensities, regardless whether either or both isotopes were from a spectrum match, or one peptide isotope was identified based on the expected 'mass shift' relative to the peptide-spectrum match (PSM) for the cognate isotope. This indicates that identified isotope pairs are correct and the the quantification values are trustable. 
+
+Below, we print the incorporation results.
+```{r, fig.height=4, fig.width=4, message=FALSE}
+print(incorporation_results$peptide_incorporation)
+print(incorporation_results$protein_incorporation)
+```
+The median observed incorporation for the mixed sample is 50.8 at the peptide-level and 50.5 at the protein level. Correcting for the mixing proportions this gives us incorporation rate estimates just over 100%, which suggests the true incorporation rate is likely to be very close to 100%. We are only using a toy data set here with 100 proteins. With the full data, we would get a more accurate estimate.
