@@ -5,6 +5,7 @@ output: github_document
 
 <!-- badges: start -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![R-CMD-check](https://github.com/MRCToxBioinformatics/Proteomics_data_analysis/workflows/R-CMD-check/badge.svg)](https://github.com/MRCToxBioinformatics/Proteomics_data_analysis/actions)
 <!-- badges: end -->
 
 The `Proteomics.data.analysis` package was prepared by the 
