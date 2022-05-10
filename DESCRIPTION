@@ -16,6 +16,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Remotes: 
     CambridgeCentreForProteomics/camprotR
+    mrctoxbioinformatics/Proteomics.analysis.data
 biocViews:
 Imports: 
     biobroom,

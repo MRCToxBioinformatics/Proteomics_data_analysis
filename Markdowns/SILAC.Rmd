@@ -3,12 +3,10 @@ title: "Processing and QC of SILAC data"
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document:
     code_folding: show
+  pdf_document: default
 bibliography: bib.json
-vignette: |
-  %\VignetteIndexEntry{SILAC} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
@@ -17,7 +15,6 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
-options(rmarkdown.html_vignette.check_title = FALSE)
 ```
 
 ### Load dependencies
@@ -25,7 +22,7 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 Load the required libraries.
 
 ```{r, message=FALSE, warning=FALSE}
-library(test.Proteomics.data.analysis)
+library(Proteomics.analysis.data)
 library(camprotR)
 library(Biostrings)
 library(ggplot2)
@@ -61,11 +58,11 @@ Importantly, note that there is a good correlation between the light and heavy i
 
 
 ```{r, fig.height=3, fig.width=6, message=FALSE}
-# The cRAP fasta file for this experiment is part of this package.
+# The cRAP fasta file for this experiment is part of the Proteomics.analysis.data package.
 # For a real experiment, make sure to the use the same cRAP fasta that was used in PD
 crap_fasta_inf <- system.file(
   "extdata", "cRAP_20190401.fasta.gz", 
-  package = "test.Proteomics.data.analysis"
+  package = "Proteomics.analysis.data"
 )
 
 # psm_silac_p4 and pep_silac_p4 are loaded from the `camprotR` package 
@@ -114,7 +111,7 @@ crap_accessions <- crap_fasta %>%
 We can then supply these cRAP protein IDs to `camprotR::parse_features` which will parse the PD output and remove features which may originate from contaminants, as well as features which don't have a unique master protein. See `?parse_features` for further details, including the removal of 'associated cRAP'. `parse_features` will output messages about the number of features at each stage in the filtering.
 
 ```{r}
-# These files are part this package
+# These files are part the Proteomics.analysis.data package
 replicates <- 1:4
 pep_infiles <- file.path('OOPS_SILAC', paste0('OOPS_', replicates, '_PeptideGroups.txt'))
 names(pep_infiles) <- replicates
@@ -129,7 +126,7 @@ pep_data_parsed <- lapply(
   pep_infiles, function(infile) { # define the function to run
     
     infdata <- read.delim(
-      system.file("extdata", infile, package = "test.Proteomics.data.analysis"))
+      system.file("extdata", infile, package = "Proteomics.analysis.data"))
     
     parse_features(infdata,
                    silac = TRUE,
@@ -249,7 +246,7 @@ Given the large number of missing values, there is a concern that protein abunda
 To get the information about what quantification values come from PSMs, we need to interrogate the PSM-level output.
 
 ```{r}
-# These files are part of this package
+# These files are part of the Proteomics.analysis.data package
 psm_infiles <- gsub('_PeptideGroups.txt', '_PSMs.txt', pep_infiles)
 ```
 
@@ -260,7 +257,7 @@ Below we use `camprotR::silac_psm_seq_int` to identify which quantification valu
 psm_matched_data <- lapply(
   psm_infiles, function(infile) {
     infdata <- read.delim(
-      system.file("extdata", infile, package = "test.Proteomics.data.analysis"))
+      system.file("extdata", infile, package = "Proteomics.analysis.data"))
     
     # If you export from PD including the 'Sequence' column, 
     # you don't need this step.
@@ -409,10 +406,10 @@ Since each of the SILAC samples was processed separately, the assignments of pep
 `camprotR::get_parsimony_pep2prot()` will take a list of files, each with Sequence, Protein.Acession and Master.Protein.Accession columns and generate a unified peptide sequence to master protein assignment. This is done by an approximately parsimonous approach, which is not identical to PD. The function therefore also summarises the difference between the PD assignments and the updated assignment, which is normally very little.
 
 ```{r, fig.height=5, fig.width=5}
-read.delim(system.file("extdata", pep_infiles[[1]], package = "test.Proteomics.data.analysis")) %>% colnames()
+read.delim(system.file("extdata", pep_infiles[[1]], package = "Proteomics.analysis.data")) %>% colnames()
 # Create a unified peptide sequence to protein assignment
 new_seq_to_master <- pep_infiles %>%
-  lapply(function(x) system.file("extdata", x, package = "test.Proteomics.data.analysis")) %>%
+  lapply(function(x) system.file("extdata", x, package = "Proteomics.analysis.data")) %>%
   camprotR::get_parsimony_pep2prot()
 
 ```
