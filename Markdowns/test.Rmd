@@ -1,0 +1,89 @@
+---
+title: "Processing and QC of SILAC data"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+bibliography: bib.json
+vignette: >
+  %\VignetteIndexEntry{SILAC}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+options(rmarkdown.html_vignette.check_title = FALSE)
+```
+
+### Load dependencies
+
+Load the required libraries.
+
+```{r, message=FALSE, warning=FALSE}
+library(Proteomics.data.analysis)
+library(camprotR)
+library(Biostrings)
+library(ggplot2)
+library(MSnbase)
+library(DEqMS)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(tibble)
+
+```
+
+
+## Preamble
+
+Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC) is a form of quantitative proteomics where different conditions are quantified in the same run by differential metabolic labelling of proteins using amino acids containing stable isotopes [@http://zotero.org/users/5634351/items/ST368TPT]. A typical SILAC experiment involved growing cells in two different types of SILAC media, one containing 'light' arginine and lysine, and the other containing 'heavy' arginine and lysine. Over time the cells incorporate these amino acids into their proteins, changing the mass of the peptides detected by LC-MS. SILAC was initially designed to provide pairwise comparisons between cell cultures, but has now been extended to more than two labels and even whole organisms [@http://zotero.org/users/5634351/items/6HPNEJ3F].
+
+This elegant experimental design enables quantification of peptide/protein abundance ratios between conditions with very little technical variation, since the samples from separate conditions are pooled as early as possible in the sample handling process. For example, cell cultures can be treated with drug/control and then collected and pooled together for all downstream protocol steps. The use of different isotope labels has been extended to study the protein turnover (e.g switch from one label to another) in pulsed SILAC, and relative turnover between conditions (e.g two condition on the same label and then switch each condition to a different label; requires triple SILAC).
+
+The analysis of SILAC data is relatively straightforward, since technical noise is low and normalisation is not normally required. Typically, one is interested in the intensity (peak area or peak height depending on your PD settings) ratio of the light (L) and heavy (H) MS peaks for a given peptide. This ratio forms the quantification value which we wish to perform statistical tests and exploratory analysis on.
+
+
+## Asssessing the SILAC isotope incorporation rate
+
+Before performing a typical SILAC experiment, it is necessary to confirm complete (e.g > 95%) incorporation of the supplemented isotopically labelled amino acids into the cellular
+proteome. 
+
+We do this with `camprotR::estimate_incorporation()` function below, which wraps multiple `camprotR` functions to parse and filter the input data and then estimate the incorporation at peptide and protein level. 
+
+Calculating the incorporation for a given peptide is simple, e.g  H/(H+L)  for a typical two label experiment. However, for very highly incorporated samples, the true intensity of the L peptide ions will be close to zero, which can lead to erroneous assignment of other ions to the L peptide. `estimate_incorporation()` also supports the calculation of incorporation from defined mixes of heavy and light labelled material, which makes the estimation of incorporation rate more robust, since both isotopes should exist for all peptides. Here, heavy and light labelled cells were mixed 1:1. 
+
+Importantly, note that there is a good correlation between the light and heavy intensities, regardless whether either or both isotopes were from a spectrum match, or one peptide isotope was identified based on the expected 'mass shift' relative to the peptide-spectrum match (PSM) for the cognate isotope. This indicates that identified isotope pairs are correct and the the quantification values are trustable. 
+
+
+```{r, fig.height=3, fig.width=6, message=FALSE}
+# The cRAP fasta file for this experiment is part of the camprotR package.
+# For a real experiment, make sure to the use the same cRAP fasta that was used in PD
+crap_fasta_inf <- system.file(
+  "extdata", "cRAP_20190401.fasta.gz", 
+  package = "camprotR"
+)
+
+# psm_silac_p4 and pep_silac_p4 are loaded from the `camprotR` package 
+incorporation_results <- camprotR::estimate_incorporation(
+  # can replace with PD output using read.delim(PSMs.txt)
+  psm_input = psm_silac_p4, 
+  # can replace with PD output using read.delim(PeptideGroups.txt)
+  peptide_input = pep_silac_p4, 
+  crap_fasta = crap_fasta_inf,
+  mix = 1 # This incorporation test was performed with a 1:1 H/L mix
+)
+
+print(incorporation_results$HL_correlation)
+```
+
+
+The median observed incorporation for the mixed sample is 50.8 at the peptide-level and 50.5 at the protein level. Correcting for the mixing proportions this gives us incorporation rate estimates just over 100%, which suggests the true incorporation rate is likely to be very close to 100%. We are only using a toy data set here with 100 proteins. With the full data, we would get a more accurate estimate.
+
+```{r, fig.height=4, fig.width=4, message=FALSE}
+print(incorporation_results$peptide_incorporation)
+print(incorporation_results$protein_incorporation)
+```
