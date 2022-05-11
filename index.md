@@ -1,5 +1,7 @@
-![](images/MRC_TU_Cambridge_identifier_horizontal_RGB2_a.png)  
-  
+
+<img src="images/UoC_logo.jpg" width="400" hspace="50"/>  <img src="images/MRC_TU_Cambridge_identifier_horizontal_RGB2_a.png" width="300"/> 
+
+
 - - - -
   
 # Proteomics Data Analysis
@@ -7,7 +9,7 @@
 The Proteomics Data Aanalysis material was prepared by the MRC
 Toxicology unit
 [Bioinformatics](https://www.mrc-tox.cam.ac.uk/facilities/bioinformatics)
-and [Proteomics](https://www.mrc-tox.cam.ac.uk/facilities/proteomics) to
+and [mass4tox Proteomics](https://www.mrc-tox.cam.ac.uk/facilities/proteomics) facilities to
 provide training in the basics of proteomics analyses.
 
 It assume the user’s data has been processed by Proteome Discoverer, as
@@ -30,8 +32,8 @@ the material has not been tested on version before this.
     
     The [Bioinformatics](https://www.mrc-tox.cam.ac.uk/facilities/bioinformatics) facility
 provide separate training covering basic `R`, data carpentry (using the `tidyverse`)
-and plotting (using `ggplot2`). If there is not a course scheduled, you can get a
-recording by emailing bioinfo@mrc-tox.cam.ac.uk.
+and plotting (using `ggplot2`). If there is not a course scheduled, you can get
+recordings by emailing bioinfo@mrc-tox.cam.ac.uk.
 
     The
 [Cambridge Bioinformatics Training](https://bioinfotraining.bio.cam.ac.uk/) 
@@ -70,7 +72,8 @@ obtain the desired quantification data from which one can perform further
 visualisation or statistical testing. Additional notebooks are included to cover
 further topics for flavour.
 
-#### [Label-Free Quantification (LFQ) (Coming soon)]()
+#### Label-Free Quantification (LFQ)
+- [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html)
 
 #### Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)
 <img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="30%"/>

@@ -17,13 +17,16 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+### Load dependencies
+
+Load the required libraries.
+```{r setup, message=FALSE, warning=FALSE}
 
 library(ggplot2)
 library(MSnbase)
 library(biobroom)
 library(camprotR)
-library(Proteomics.data.analysis)
+library(Proteomics.analysis.data)
 library(dplyr)
 library(tidyr)
 
@@ -31,7 +34,7 @@ library(tidyr)
 
 ## Preamble
 
-Label-Free Quantification (LFQ) is a form of quantitative proteomics where different conditions are quantified in separarte MS runs (REF). Since each sample is run separately, different peptides will be quantified in each sample and the peptide intensities may not be directly comparable between samples. LFQ also typically suffers from a higher burden of missing values. One solution to this is so-called 'Matched between runs' (REF), or the equivalent 'Minora' algorithm employed by PD. This uses the observed retention times of MS1 ions which were successfully spectrum matched to identify the likely peptide sequence of MS1 ions that could not be spectrum matched. 
+Label-Free Quantification (LFQ) is the simplest form of quantitative proteomics, in which different samples are quantified in separate MS runs. Since each sample is run separately, different peptides will be quantified in each sample and the peptide intensities may not be directly comparable between samples. LFQ also typically suffers from a higher burden of missing values. One solution to this is so-called 'match-between-runs' [@http://zotero.org/users/5634351/items/87YIDK69], or the functionally equivalent 'Minora' algorithm employed by PD. These algorithms use the observed retention times of MS1 ions which were successfully spectrum matched to identify the likely peptide sequence of MS1 ions that could not be spectrum matched. 
 
 Despite the pitfalls of LFQ, the data analysis is still is relatively straightforward, though there are steps that need some careful consideration and quality control assessment.
 
@@ -39,10 +42,9 @@ Despite the pitfalls of LFQ, the data analysis is still is relatively straightfo
 
 We start with the peptide-level output from Proteome Discoverer (PD). This experiment was designed to identify RNA-binding proteins (RBP) in the U-2 OS cell line using the OOPS method [@http://zotero.org/users/5634351/items/EJHWF46N] with a comparison of RNase +/- used to separate RBPs from background non-specific proteins. 4 replicate experiments were performed, where the RNase +/- experiments were performed from the same OOPS interface. For each LFQ run, approximately the same quantity of peptides were injected, based on quantification of peptide concentration post trypsin digestion. This data is not published but the aim of the experiment is equivalent to Figure 2e in the original OOPS paper[@http://zotero.org/users/5634351/items/EJHWF46N].  
 
-The data we will use is available through this package. This is simply a `PeptideGroups.txt` file from PD which has been read into memory using `read.delim(<PeptideGroups.txt>")`, where `<PeptideGroups.txt>` is the path to the PeptideGroups file.
+The data we will use is available through the `Proteomics.analysis.data` package.
 ```{r}
-pep_data <- lfq_all_oops_rnase_pep
-
+pep_data <- read.delim(system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_PeptideGroups.txt', package = "Proteomics.analysis.data"))
 ```
 
 We can explore the structure of the input data using `str`. We see that we have a `data.frame()` with `r nrow(pep_data)` rows and `r ncol(pep_data)` columns. The most important columns to us are:
@@ -52,12 +54,33 @@ We can explore the structure of the input data using `str`. We see that we have 
 - Master.Protein.Accessions: The assigned master protein(s)
 - Abundance.F*.Sample: Columns with the peptide intensities
 
+
 ```{r}
 str(pep_data)
 ```
 
-The samples analysed are as follows:
+> ### Discussion
+>
+> Examine the column names and answer the following:
+>
+> 1. How do the numerical values in the Abundance.F*.Sample columns relate
+> to the conditions (RNase +/-)?
 
+### Solution
+```{r class.source = 'fold-hide'}
+# 1. It's not possible to tell!
+```
+
+The InputFiles.txt file can be used to determine the relationship between the Abundance.F*.Sample columns and the samples.
+The accompanying `LFQ_OOPS_RNase_InputFiles.txt` file is available through the `Proteomics.analysis.data` package.
+```{r}
+inputfiles <- read.delim(system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_InputFiles.txt', package = "Proteomics.analysis.data"))
+print(inputfiles %>% filter(Study.File.ID!=''))
+```
+
+Here, we see that F17-20 are 'R_neg', e.g RNase - and F21-24 are 'R_positive', e.g RNase +.
+
+We could parse the InputFiles.txt file to generate the sample information, but for this experiment, it's small enough that it can be easily generated manually.
 ```{r}
 sample_data <- data.frame(
   File = paste0("F", 17:24),
@@ -66,19 +89,22 @@ sample_data <- data.frame(
   Replicate = rep(1:4, 2)
 )
 
-knitr::kable(sample_data)
+knitr::kable(sample_data,
+             align = "cccc",
+             format = "html",
+             table.attr = "style='width:30%;'")
 ```
 
 
-## Parse input data and remove contaminants 
-Before we start to parse the input data, we need to identify the contaminant proteins, which were supplied to Proteome Discoverer. We want to remove these from the data. These were defined using the [cRAP database](https://www.thegpm.org/crap/). Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and UniProt accessions for these proteins to be completely sure we are remoing all cRAP.
+### Parse PeptideGroups.txt file
+To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. This function will read in the data and remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the [cRAP database](https://www.thegpm.org/crap/) and provided to PD. We need to obtain their accessions and provide these to `camprotR::parse_features`. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
 
-Again, the file we will use `cRAP_20190401.fasta.gz` is available through the `camprotR` package. 
+The file we will use, `cRAP_20190401.fasta.gz`, is available through the `Proteomics.analysis.data` package. 
 ```{r}
 
 crap_fasta_inf <- system.file(
   "extdata", "cRAP_20190401.fasta.gz", 
-  package = "camprotR"
+  package = "Proteomics.analysis.data"
 )
 
 # Load the cRAP FASTA used for the PD search
@@ -98,7 +124,6 @@ See `?parse_features` for further details, including the removal of 'associated 
 ```{r}
 pep_data_flt <- camprotR::parse_features(
   pep_data,
-  TMT = FALSE, 
   level = 'peptide',
   crap_proteins = crap_accessions, 
 )
@@ -107,14 +132,20 @@ pep_data_flt <- camprotR::parse_features(
 From the above, we can see that we have started with `r nrow(pep_data)` 'features' (peptides) from `r length(unique(pep_data$Master.Protein.Accessions))` master proteins across all samples. After removal of contaminants and peptides that can't be assigned to a unique master protein, we have `r nrow(pep_data_flt)` peptides remaining from `r length(unique(pep_data_flt$Master.Protein.Accessions))` master proteins.
 
 ## Convert to MSnSet
-We now store the filtered peptide data in an MSnSet, the standard data object for proteomics in R. See the `vignette("msnset", package="camprotR")` for more details.
+We now store the filtered peptide data in an MSnSet, the standard data object for proteomics in R.
 
+This object contains 3 elements:
+- A quantification data matrix (rows=features, e.g peptides/proteins, columns=samples)
+- Feature data (rows=features, columns=feature annotations, e.g peptide master protein assignment)
+- Experimental details (rows=samples, columns=experimental details, e.g treatment)
+
+See the `vignette("msnset", package="camprotR")` for more details.
 ```{r}
-# Create expression matrix with peptide abundances (exprs) and human 
-# readable column names
+# Create expression matrix with peptide abundances (exprs) and
+# human readable column names
 exprs_data <- pep_data_flt %>% 
   select(matches("Abundance")) %>% 
-  `colnames<-`(sample_data$Sample) %>% 
+  setNames(sample_data$Sample) %>% 
   as.matrix()
 
 # Create data.frame with sample metadata (pData)
@@ -123,12 +154,12 @@ pheno_data <- sample_data %>%
   tibble::column_to_rownames(var = "Sample")
 
 # Create data.frame with peptide metadata (fData)
-feat_data <- pep_data_flt %>% 
+feature_data <- pep_data_flt %>% 
   select(-matches("Abundance"))
 
 # Create MSnSet
 pep <- MSnbase::MSnSet(exprs = exprs_data,
-                       fData = feat_data,
+                       fData = feature_data,
                        pData = pheno_data)
 ```
 
