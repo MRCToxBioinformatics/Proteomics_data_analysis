@@ -17,6 +17,7 @@ knitr::opts_chunk$set(
 
 ```
 
+
 There are a number of statistical tests/R packages one can use to perform differential abundance testing for proteomics data. The list below is by no means complete:
 
 - **t-test**: If we assume that the log-transformed SILAC ratios are Gaussian
@@ -39,6 +40,20 @@ variance. This is usually the case, although
   
   As such, `DEqMS` is preferred over limma for SILAC data.
 
+### Load dependencies
+
+Load the required libraries.
+
+```{r, message=FALSE, warning=FALSE}
+library(camprotR)
+library(ggplot2)
+library(MSnbase)
+library(DEqMS)
+library(limma)
+library(dplyr)
+library(tidyr)
+
+```
 
 Here, we will use the SILAC data processed in [Processing and QC of SILAC data](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html). Please see the previous notebook for details of the experimental design and aim and data processing. 
 
