@@ -64,7 +64,7 @@ knitr::kable(data.frame('Replicate'=1:4, 'Heavy'=c('CL', 'CL', 'NC', 'NC'), 'Lig
 ```
 
 
-Below, we define the filepaths for the 'PeptideGroup.txt' files we will use. These are part the Proteomics.analysis.data package. As such, their complete filepath can be identified using `system.file`.
+Below, we define the filepaths for the 'PeptideGroup.txt' files we will use. These are part the `Proteomics.analysis.data` package. As such, their complete filepath can be identified using `system.file`.
 ```{r}
 replicates <- 1:4
 pep_infiles <- file.path('OOPS_SILAC', paste0('OOPS_', replicates, '_PeptideGroups.txt'))
@@ -100,7 +100,7 @@ print(colnames(infdata))
 Your PD output may have additional columns. For example, if all your SILAC samples were simultaneously processed in PD, you will have a 'Light' and 'Heavy' column for each one.
 
 ### Parse PeptideGroups.txt files
-To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. This function will read in the data and remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the cRAP database and provided to PD. We need to obtain their accessions and provide these to `camprotR::parse_features`. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. This function will read in the data and remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the [cRAP database](https://www.thegpm.org/crap/) and provided to PD. We need to obtain their accessions and provide these to `camprotR::parse_features`. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
 
 ```{r}
 crap_fasta_inf <- system.file(
@@ -197,7 +197,16 @@ abundance_data_complete <- do.call('rbind', annot_pep_data_parsed) %>%
 
 ### Calculate ratios
 
-Next, we calculate the CL/NC ratio using `camprotR::get_ratio`, which will also add a `missing` column to describe whether one of the quantification values is missing. `camprotR::get_ratio` expects the quantification values to be on a log scale.
+> Exercise 2
+> Add a new column to `abundance_data_complete` which gives the CL/NC ratio
+
+### Solution
+```{r class.source = 'fold-hide', eval=FALSE}
+abundance_data_complete %>% mutate(ratio=CL/NC)
+```
+
+
+Here, we will calculate the CL/NC ratio using `camprotR::get_ratio`, which will also add a `missing` column to describe whether one of the quantification values is missing. This is useful for quality control purposes. `camprotR::get_ratio` expects the quantification values to be on a log scale and returns log-transformed ratios. We will use base 2 for our log transformation, since this is relatively intuitive. 
 ```{r}
 ratios <- abundance_data_complete %>%
   filter((is.finite(CL) | is.finite(NC))) %>% # Retain peptides where either CL and/or NC is finite
@@ -364,14 +373,12 @@ matched_tallies %>%
 
 ```
 
+> Discussion
+> Why are more peptides spectrum matched in just CL? 
 
-We can then see consider how the correlated between CL and NC relates to the 'spectrum matched' information. Note that when both CL and NC are spectrum matched, there are two clear populations, especially for replicates 1 & 2.
+### Not all peptide ratios are equally accurate
 
-1. CL == NC (on grey dashed line). These are the peptides not enriched by UV CL and therefore from non-RBPs
-2. CL >> NC (below grey dashed line). These peptides are heavily enriched by UV CL and therefore from RBPs.
-
-When just CL is matched, the correlation is less clear and the two populations are not obvious. One plausible explanation is that many of the NC quantification values obtained when CL is identified by spectrum matching, but NC is identified by mass shift, are from ions erroneously assigned to a peptide. This would be a concern.
-
+Now we have summarise the 'spectrum matched' information, we can then consider how this relates to the correlation between CL and NC. 
 
 ```{r, fig.width=8, fig.height=8}
 ratios_matched %>%
@@ -401,10 +408,18 @@ cl_nc_correlations %>%
   scale_colour_manual(values=get_cat_palette(4))
 ```
 
+Note that when both CL and NC are spectrum matched, there are two clear populations, especially for replicates 1 & 2.
+
+1. CL == NC (on grey dashed line). These are the peptides not enriched by UV CL and therefore from non-RBPs
+2. CL >> NC (below grey dashed line). These peptides are heavily enriched by UV CL and therefore from RBPs.
+
+When just CL is matched, the correlation is less clear and the two populations are not obvious. One plausible explanation is that many of the NC quantification values obtained when CL is identified by spectrum matching, but NC is identified by mass shift, are from ions erroneously assigned to a peptide. This would be a concern.
 
 Whenever a SILAC experiment is performed where complete absence of a protein in one condition is likely, it is recommended to perform this QC step. If the correlation is very poor when just one condition is spectrum matched, it may be necessary to exclude these peptides.
 
 In this vignette example, we will proceed with all the peptides, but retain information about the spectrum matching in the protein quantification, should we need to investigate this further.
+
+### Creating an `MSnSet`
 
 Now, we want to make an `MSnSet` from the peptide-level CL/NC ratios. For this, we need to generate a matrix of quantification values (CL/NC ratios), where rows are features (peptides), and a separate data.frame with information about the features, e.g master protein assignment. See the `vignette("msnset", package="camprotR")` for more details about MSnSets.
 
@@ -417,7 +432,7 @@ Since each of the SILAC samples was processed separately, the assignments of pep
 this step is not neccessary. You do not need to create `new_seq_to_master` or update the `Master.Protein.Accessions` column.
 
 ```{r, fig.height=5, fig.width=5}
-read.delim(system.file("extdata", pep_infiles[[1]], package = "Proteomics.analysis.data")) %>% colnames()
+
 # Create a unified peptide sequence to protein assignment
 new_seq_to_master <- pep_infiles %>%
   lapply(function(x) system.file("extdata", x, package = "Proteomics.analysis.data")) %>%
@@ -484,11 +499,21 @@ pData(pep_res)$Replicate <- 1:ncol(exprs_data)
 
 ```
 
-Below, we print the object to see a summary. Amongst other things, this tells us:
+Below, we print the object to see a summary. 
+```{r}
+print(pep_res)
+```
 
-- The `assayData`contains `r nrow(pep_res)` features and `r ncol(pep_res)` samples
-- `r length(fvarLabels(pep_res))`` feature labels (`fvarLabels`)
-- `r length(varLabels(pep_res))`` phenotype labels (`varLabels`)
+> Exercise 4
+> 1. How many peptides are there?
+> 2. How many feature columns are there?
+
+### Solution
+```{r class.source = 'fold-hide', echo=FALSE, eval=FALSE}
+
+nrow(pep_res) #1
+length(fvarLabels(pep_res)) #2
+```
 
 Note that there is also a section call 'Processing information'. This will retain
 information about any processing we perform on our data.
@@ -542,7 +567,7 @@ MSnbase::plotNA(prot_res, pNA = 0)
 ```
 
 
-> ### Exercise 2
+> ### Exercise 5
 >
 > We have used `MSnbase::plotNA` to assess the missing values but it's 
 > straightforward to do this ourselves directly from the `prot_res` object.
@@ -570,7 +595,7 @@ analyses from this point.
 
 Below, we save the peptide and protein level objects to disk, so we can read them
 back into memory in downstream analyses. We use `saveRDS` to save them in compressed R binary format.
-```{r}
+```{r, eval=FALSE}
 saveRDS(prot_res, 'results/prot_res.rds')
 saveRDS(pep_res, 'results/pep_res.rds')
 ```

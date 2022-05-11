@@ -61,21 +61,25 @@ the data we will use.
 
 - - - -
   
-## Course sections
+## Course materials
 The course is broken into sections for different 'flavours' of quantitative
-bottom-up proteomics by Mass-spectrometry. Each section starts from the Proteome
-Discoverer (PD) output files and performs filtering, quality control and data
-processing to obtain the desired quantification data from which one can perform
-further visualisation or statistical testing.
+bottom-up proteomics by Mass-spectrometry. Each section contains a notebook
+covering data processing and QC which starts from the Proteome Discoverer (PD)
+output files and performs filtering, quality control and data processing to
+obtain the desired quantification data from which one can perform further
+visualisation or statistical testing. Additional notebooks are included to cover
+further topics for flavour.
 
-### [Label-Free Quantification (LFQ) (Coming soon)]()
+#### [Label-Free Quantification (LFQ) (Coming soon)]()
 
-### [Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html)
-<p><a href="https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html">
+#### Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)
 <img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="30%"/>
-</a></p>
 
-### [Tandem-Mass Tags (TMT) (Coming soon)]()
+- [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html)
+- [Differential abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
+- [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
+
+#### [Tandem-Mass Tags (TMT) (Coming soon)]()
 
 <img src="https://www.creative-proteomics.com/images/TMT-Based-Proteomics-Service.png" width="30%"/>
 
