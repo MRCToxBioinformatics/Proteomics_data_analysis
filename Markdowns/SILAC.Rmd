@@ -410,7 +410,7 @@ In this vignette example, we will proceed with all the peptides, but retain info
 
 Now, we want to make an `MSnSet` from the peptide-level CL/NC ratios. For this, we need to generate a matrix of quantification values (CL/NC ratios), where rows are features (peptides), and a separate data.frame with information about the features, e.g master protein assignment. See the `vignette("msnset", package="camprotR")` for more details about MSnSets.
 
-Since each of the SILAC samples was processed separately, the assignments of peptides -> master proteins may not be consistent. This will cause issues when we try and create the MSnSet and we therefore need to update the master protein column. 
+Since each of the SILAC samples was processed separately, the assignments of peptides -> master proteins may not be consistent. This will cause issues when we try and create the `MSnSet` and we therefore need to update the master protein column. 
 
 `camprotR::get_parsimony_pep2prot()` will take a list of files, each with Sequence, Protein.Acession and Master.Protein.Accession columns and generate a unified peptide sequence to master protein assignment. This is done by an approximately parsimonous approach, which is not identical to PD. The function therefore also summarises the difference between the PD assignments and the updated assignment, which is normally very little.
 
@@ -437,9 +437,14 @@ flt_ratios <- ratios_matched %>%
   mutate(Master.Protein.Accessions=Updated.Master.Protein.Accessions)
 ```
 
+Now we have our sanitised ratios, we can create the `MSnSet`. This object contains 3 elements:
+- A quantification data matrix (rows=features, e.g peptides/proteins, columns=samples)
+- Feature data (rows=features, columns=feature annotations, e.g peptide master protein assignment)
+- Experimental details (rows=samples, columns=experimental details, e.g treatment)
+
+Our ratios are in a 'long' format, so we need to make them wider, so that each sample is a column in a quantification matrix.
+
 ```{r}
-
-
 # Create a wide table with unique ids as row names
 flt_ratios_wide <- flt_ratios %>% 
   select(Master.Protein.Accessions,
@@ -454,23 +459,51 @@ flt_ratios_wide <- flt_ratios %>%
 exprs_data <- flt_ratios_wide %>% 
   select(matches("ratio_[1-4]")) %>% # select unique ids and ratio data
   as.matrix()
+```
 
+For the peptide features, we will take all the columns other than the peptide ratios
+```{r}
 # Create feature metadata data frame (fData)
 feat_data <- flt_ratios_wide %>% 
   select(!matches("ratio")) # select unique ids and everything but ratio data
+```
 
+We then create an `MSnSet`. Note that here, we do not provide any experimental
+condition to the `MSnSet` contrustuctor, so 'pData' returns a data.frame with no columns 
+```{r}
 # Create MSnSet
 pep_res <- MSnSet(exprs = exprs_data,
                   fData = feat_data)
 
+print(pData(pep_res))
+```
+
+The only important experimental condition here is the replicate number, which we add below
+```{r}
 # Add replicate number to phenotype data
 pData(pep_res)$Replicate <- 1:ncol(exprs_data)
 
-pep_res
+
 ```
 
+Below, we print the object to see a summary. Amongst other things, this tells us:
 
-Then we summarise the peptide-level ratios to protein-level ratios. Here, we'll use the median. 
+- The `assayData`contains `r nrow(pep_res)` features and `r ncol(pep_res)` samples
+- `r length(fvarLabels(pep_res))`` feature labels (`fvarLabels`)
+- `r length(varLabels(pep_res))`` phenotype labels (`varLabels`)
+
+Note that there is also a section call 'Processing information'. This will retain
+information about any processing we perform on our data.
+
+See the `vignette("msnset", package="camprotR")` for more details about MSnSets.
+```{r}
+print(pep_res)
+```
+
+Then we summarise the peptide-level ratios to protein-level ratios. Here, we'll use the median.
+Note the message about missing values. We're given the option `na.rm=TRUE`, which will be passed onto
+`medium()` to ensure missing values are handled appropriately, e.g `medium(x, y, NA)`
+will return the equivalent to `medium(x, y)`.
 
 ```{r, fig.height=4, fig.width=4}
 prot_res <- combineFeatures(
@@ -515,8 +548,8 @@ MSnbase::plotNA(prot_res, pNA = 0)
 >
 > We have used `MSnbase::plotNA` to assess the missing values but it's 
 > straightforward to do this ourselves directly from the `prot_res` object.
-> Remembering that `exprs()` can be used to extract the abundance matrix from an
-> `MSnSet`, answer the following:
+> Remembering that `exprs()` can be used to extract the `assayData` abundance
+> matrix from an `MSnSet`, answer the following:
 >
 > 1. How many values are missing in total?
 > 2. What fraction of values are missing?
@@ -533,72 +566,20 @@ colSums(is.na(prot_res)) #3
 table(rowSums(is.na(prot_res))) #4
 ```
 
+At this point, we have obtained an `MSnSet` containing protein-level ratios for
+each sample. You will likely wish to perform bespoke visualisations and statistical
+analyses from this point.
 
-To identify proteins with significantly increased abundance in CL vs NC, we will use DEqMS [@http://zotero.org/users/5634351/items/RTM6NFVU], which you can think of as an extension of limma [@http://zotero.org/users/5634351/items/6KTXTWME] specifically for proteomics. 
-
-The next step is taken from the [DEqMS vignette](https://bioconductor.org/packages/release/bioc/vignettes/DEqMS/inst/doc/DEqMS-package-vignette.html#extract-quant-data-columns-for-deqms). The idea is that we want to create an `MArrayLM` object as per normal `limma` analysis and then  add a `$count` column to the `MArrayLM` object and then use the `spectraCounteBayes` function to perform the Bayesian shrinkage using the count column (which describes the number of pepitdes per protein) rather than the `$Amean` column (which describes the mean CL:NC ratio). In the DEqMS paper, they suggest that the best summarisation metric to use is the minimum value across the samples, so our `count` columns is the minimum number of peptides per protein.  
-
+Below, we save the peptide and protein level objects to disk, so we can read them
+back into memory in downstream analyses. We use `saveRDS` to save them in compressed R binary format.
 ```{r}
-dat <- prot_res %>% 
-  filterNA(pNA = 0.5) %>% # select proteins in min. 2/4 reps
-  exprs()
-
-design <- cbind(Intercept = rep(1, ncol(dat)))
-
-fit <- lmFit(dat, design)
-efit <- eBayes(fit)
-
-protein_ratio_long <- prot_res %>%
-  exprs() %>%
-  data.frame() %>%
-  tibble::rownames_to_column('Master.Protein.Accessions') %>%
-  pivot_longer(cols=-Master.Protein.Accessions, values_to='protein_ratio', names_to='sample')
-
-# Obtain the min peptide count across the samples
-min_pep_count <- camprotR::count_features_per_protein(pep_res) %>%
-  merge(protein_ratio_long, by=c('Master.Protein.Accessions', 'sample')) %>%
-  filter(is.finite(protein_ratio)) %>%  
-  group_by(Master.Protein.Accessions) %>%
-  summarise(min_pep_count = min(n))
-
-# add the min peptide count
-efit$count <- min_pep_count %>% 
-  filter(Master.Protein.Accessions %in% rownames(efit$coefficients)) %>% 
-  pull(min_pep_count)
-
-# run DEqMS
-efit_deqms <- suppressWarnings(spectraCounteBayes(efit))
+saveRDS(prot_res, 'results/prot_res.rds')
+saveRDS(pep_res, 'results/pep_res.rds')
 ```
 
 
-In this case the relationship between peptide count and variance is only really apparent when the minimum number of peptides from which a protein-level ratio is obtained is very low. Typically, one might remove quantifications where there is just a single peptide for a protein. Here, we will keep them, and we can refer to the `count` column in the final results object if we want to check the minimum numbber of peptides observed per sample.
-
-```{r, fig.height=4, fig.width=4}
-# Diagnostic plots
-VarianceBoxplot(efit_deqms, n = 30, xlab = "Peptides")
-```
+For an example of differential abundance testing from the SILAC CL/NC ratios, see
+[Differential abundance testing with SILAC ratios](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
 
 
-Below, we summarise the number of proteins with statistically different abundance in CL vs NC and plot a 'volcano' plot to visualise this. Note that all proteins with a statistically significant change are increased in CL, so the plot looks more like a fire-hose than a volcano!
 
-```{r, fig.height=5, fig.width=5}
-deqms_results <- outputResult(efit_deqms, coef_col = 1)
-
-table(ifelse(deqms_results$sca.adj.pval < 0.01, 'sig.', 'not sig.'),
-      ifelse(deqms_results$logFC > 0, 'Higher in CL', 'Lower in CL'))
-
-deqms_results %>%
-  ggplot(aes(x = logFC, y = -log10(sca.P.Value), colour = sca.adj.pval < 0.01)) +
-  geom_point() +
-  theme_camprot() +
-  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'CL vs NC Sig.') +
-  labs(x = 'CL vs NC (Log2)', y = '-log10(p-value)')
-```
-
-
-Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columnts are from `limma`. The columns prefixed with `sca` are the from `DEqMS`. 
-
-```{r}
-head(deqms_results)
-
-```
