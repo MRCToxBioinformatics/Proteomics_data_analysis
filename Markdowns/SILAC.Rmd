@@ -22,10 +22,9 @@ knitr::opts_chunk$set(
 
 Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC) is a form of quantitative proteomics where different conditions are quantified in the same run by differential metabolic labelling of proteins using amino acids containing stable isotopes [@http://zotero.org/users/5634351/items/ST368TPT]. A typical SILAC experiment involved growing cells in two different types of SILAC media, one containing 'light' arginine and lysine, and the other containing 'heavy' arginine and lysine. Over time the cells incorporate these amino acids into their proteins, changing the mass of the peptides detected by LC-MS. The two pools of cells can then be used to compare e.g two experimental conditions.
 
-<figure>
-  <img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="50%">
-  <figcaption>The principle of SILAC. Source: https://www.creative-proteomics.com/blog/index.php/stable-isotope-labeling-using-amino-acids-in-cell-culture-silac-principles-workflow-and-applications </figcaption>
-</figure> 
+<img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="50%"/>
+
+<span style="font-size:x-small;">The principle of SILAC. Source: https://www.creative-proteomics.com/blog/index.php/stable-isotope-labeling-using-amino-acids-in-cell-culture-silac-principles-workflow-and-applications</span>
 
 SILAC was initially designed to provide pairwise comparisons between cell cultures, but has now been extended to more than two labels and even whole organisms [@http://zotero.org/users/5634351/items/6HPNEJ3F].
 
@@ -51,8 +50,7 @@ library(tibble)
 
 ```
 
-Typically, the incorporation rate testing will be performed for you by the Proteomics service. However, should you wish to do this yourself, see [Asssessing the SILAC isotope incorporation rate](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
-
+Typically, the incorporation rate testing will be performed for you by the mass4tox Proteomics service. However, should you wish to do this yourself, see [Asssessing the SILAC isotope incorporation rate](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
 
 ## Processing and QC of SILAC experimental data
 
@@ -60,9 +58,16 @@ Here, we will use data from an OOPS [@http://zotero.org/users/5634351/items/EJHW
 
 In total, we have 4 SILAC runs, representing 4 separate plates of U-2 OS cells. Two plates (replicate 1 & 2) were Heavy for CL and two plates (replicates 3 & 4) were Light for CL. This is called a 'label' swap/switch and helps to ensure the results are independent of the labelling scheme.
 
-Below, we define the filepaths for the 'PeptideGroup.txt' files we will use. These are part the Proteomics.analysis.data package - their complete filepath can be identified using `system.file`
+```{r, echo=FALSE}
+knitr::kable(data.frame('Replicate'=1:4, 'Heavy'=c('CL', 'CL', 'NC', 'NC'), 'Light'=c('NC', 'NC', 'CL', 'CL')),
+             align = "ccc",
+             format = "html",
+             table.attr = "style='width:30%;'")
+```
+
+
+Below, we define the filepaths for the 'PeptideGroup.txt' files we will use. These are part the Proteomics.analysis.data package. As such, their complete filepath can be identified using `system.file`.
 ```{r}
-# These files are part the Proteomics.analysis.data package
 replicates <- 1:4
 pep_infiles <- file.path('OOPS_SILAC', paste0('OOPS_', replicates, '_PeptideGroups.txt'))
 names(pep_infiles) <- replicates
@@ -97,9 +102,14 @@ print(colnames(infdata))
 Your PD output may have additional columns. For example, if all your SILAC samples were simultaneously processed in PD, you will have a 'Light' and 'Heavy' column for each one.
 
 ### Parse PeptideGroups.txt files
-To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. As part of this, we will remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the cRAP database and we need to obtain their accessions. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. This function will read in the data and remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the cRAP database and provided to PD. We need to obtain their accessions and provide these to `camprotR::parse_features`. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
 
 ```{r}
+crap_fasta_inf <- system.file(
+  "extdata", "cRAP_20190401.fasta.gz", 
+  package = "Proteomics.analysis.data"
+)
+
 # Load the cRAP FASTA used for the PD search. For your experiment,
 # make sure you're using the same file as used in the PD workflow
 crap_fasta <- Biostrings::fasta.index(crap_fasta_inf, seqtype = "AA")
@@ -209,7 +219,7 @@ missing_tallies <- ratios %>%
 
 missing_tallies %>%
   ggplot(aes(x = missing, y = n)) +
-  theme_camprot(border = FALSE) + 
+  theme_camprot(border = FALSE) + # theme_camprot is a ggplot2 theme defined in camprotR
   geom_bar(stat = 'identity', colour = 'grey50') +
   labs(y='Peptides', x='') +
   theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1))
@@ -372,8 +382,6 @@ ratios_matched %>%
   geom_abline(slope = 1, linetype = 2, colour = 'grey50') + # line at CL==NC
   theme_camprot(base_size = 15, border = FALSE) +
   facet_grid(Replicate~ matched) +
-  scale_x_continuous(breaks = seq(14, 26, 4), limits = c(14, 26)) +
-  scale_y_continuous(breaks = seq(14, 26, 4), limits = c(14, 26)) +
   xlab('CL (log2)') +
   ylab('NC (log2)')
 ```
@@ -405,6 +413,10 @@ Now, we want to make an `MSnSet` from the peptide-level CL/NC ratios. For this, 
 Since each of the SILAC samples was processed separately, the assignments of peptides -> master proteins may not be consistent. This will cause issues when we try and create the MSnSet and we therefore need to update the master protein column. 
 
 `camprotR::get_parsimony_pep2prot()` will take a list of files, each with Sequence, Protein.Acession and Master.Protein.Accession columns and generate a unified peptide sequence to master protein assignment. This is done by an approximately parsimonous approach, which is not identical to PD. The function therefore also summarises the difference between the PD assignments and the updated assignment, which is normally very little.
+
+> **Note**
+> If all your SILAC samples were processed in one single PD workflow, e.g you have just one file for all samples,
+this step is not neccessary. You do not need to create `new_seq_to_master` or update the `Master.Protein.Accessions` column.
 
 ```{r, fig.height=5, fig.width=5}
 read.delim(system.file("extdata", pep_infiles[[1]], package = "Proteomics.analysis.data")) %>% colnames()
