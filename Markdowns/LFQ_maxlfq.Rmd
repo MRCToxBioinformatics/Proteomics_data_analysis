@@ -1,0 +1,192 @@
+---
+title: "Alternatives for summarising to protein-level abundance - MaxLFQ"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+### Load dependencies
+
+Load the required libraries.
+```{r setup, message=FALSE, warning=FALSE}
+
+library(ggplot2)
+library(MSnbase)
+library(biobroom)
+library(camprotR)
+library(Proteomics.analysis.data)
+library(dplyr)
+library(tidyr)
+
+```
+
+Although we recommend using the 'robust' summarisation, there are other algorithms that are commonly applied. For example MaxLFQ [@http://zotero.org/users/5634351/items/87YIDK69], which is implemented within MaxQuant, but also available via the `iq::maxLFQ()` function in the iq package in R (now available on [CRAN](https://cran.r-project.org/web/packages/iq/index.html)). 
+
+```{r}
+pep_restricted <- readRDS('results/lfq_pep_restricted.rds')
+
+```
+
+```{r}
+# You may wish to retain more feature columns that this in your experimental data!
+feature_coloumns_to_retain <- c("Master.Protein.Accessions")
+
+# To ensure we are only comparing the protein inference method and not normalisation etc,
+# we will use the same set of peptides for both inference methods
+pep_data_for_summarisation <- pep_restricted %>%
+  exprs() %>%
+  data.frame() %>%
+  merge(fData(pep_restricted)[, feature_coloumns_to_retain, drop = FALSE], 
+        by = 'row.names') %>%
+  select(-Row.names)
+```
+
+Below, we use `iq::maxLFQ()` to perform the summarisation manually. It should be possible to use this function within `MSnbase::combineFeatures()` too in theory since it accommodates user-defined functions.
+
+```{r}
+# Define a function to perform MaxLFQ on a single protein and return a data.frame
+# as required. 
+get_maxlfq_estimate <- function(obj) {
+  prot <- iq::maxLFQ(as.matrix(obj))$estimate
+  
+  data.frame(t(prot)) %>% 
+    setNames(colnames(obj))
+}
+
+# Group by the features we want to retain and use MaxLFQ on each protein
+maxlfq_estimates <- pep_data_for_summarisation %>%
+  
+  # group by the columns we want to retain. These define a unique protein ID
+  group_by(across(all_of(feature_coloumns_to_retain))) %>% 
+  
+  # Perform maxLFQ summarisation for each group
+  dplyr::group_modify(~ get_maxlfq_estimate(.)) %>%
+  ungroup()
+
+# Create the protein-level MSnSet
+maxlfq.e <- as.matrix(select(maxlfq_estimates, -all_of(feature_coloumns_to_retain)))
+maxlfq.f <- data.frame(select(maxlfq_estimates, all_of(feature_coloumns_to_retain)))
+maxlfq.p <- pData(pep_restricted)
+
+prot_maxlfq <- MSnSet(exprs = maxlfq.e,
+                      fData = maxlfq.f,
+                      pData = maxlfq.p)
+
+# Update the rownames to be the protein IDs
+rownames(prot_maxlfq) <- maxlfq_estimates$Master.Protein.Accessions
+```
+
+
+
+We can now compare the protein-level abundance estimates.
+
+```{r, warning=FALSE, fig.height=3, fig.width=5, fig.fullwidth=TRUE, fig.cap="Comparison of protein inference methods"}
+# Define a function to extract the protein abundances in long form and
+# add a column annotating the method
+get_long_form_prot_exp <- function(obj, method_name) {
+  tidy(obj) %>%
+    rename(abundance=value) %>%
+    mutate(method = method_name)
+}
+
+# Single object with protein inference from both methods 
+compare_protein_abundances <- rbind(
+  get_long_form_prot_exp(prot_maxlfq, 'MaxLFQ'),
+  get_long_form_prot_exp(prot_robust, 'Robust')
+)
+```
+
+> ### Exercise 2
+> Compare the protein-abundance estimates using 'robust' and 'maxLFQ' using a
+> scatter plot (see example below but don't worry if it doesn't exactly match).
+> What does you conclude.
+>
+> Hint: You will need to use pivot_wider to pivot the data so that you have one
+> column for each method
+
+
+### Solution
+```{r class.source = 'fold-hide', echo=FALSE}
+# Plot direct comparison
+compare_protein_abundances %>%
+  
+  # pivot to wider form for plotting
+  pivot_wider(names_from = method, values_from = abundance) %>% 
+  filter(is.finite(Robust), is.finite(MaxLFQ)) %>%
+  ggplot(aes(x = Robust, y = MaxLFQ)) +
+  geom_point(alpha = 0.25, size = 0.5) +
+  theme_camprot(border = FALSE, base_family = 'sans', base_size = 15) +
+  geom_abline(slope = 1, colour = get_cat_palette(2)[2], linetype = 2, size = 1)
+
+compare_protein_abundances %>%
+  pivot_wider(names_from = method, values_from = abundance) %>% 
+  filter(is.finite(Robust), is.finite(MaxLFQ)) %>%
+  select(Robust, MaxLFQ) %>%
+  cor()
+```
+
+
+
+There is a very good overall correlation. Let's inspect a few proteins with the largest differences between the two approaches to see what's going on for the edge cases.
+
+```{r}
+# Identify proteins with largest difference between the protein summarisation methods
+proteins_of_interest <- compare_protein_abundances %>%
+  pivot_wider(names_from = method, values_from = abundance) %>%
+  mutate(diff = MaxLFQ-Robust) %>%
+  arrange(desc(abs(diff))) %>%
+  pull(protein) %>%
+  unique() %>%
+  head(5)
+```
+
+Below we define a function to plot the peptide and protein abundances for the two methods for a single protein. We can ignore the details since it's the plots themselves we are interested in.
+
+```{r}
+plot_pep_and_protein <- function(protein_of_interest) {
+  
+  to_plot_compare <- compare_protein_abundances %>% 
+    filter(protein == protein_of_interest)
+  
+  pep_restricted[fData(pep_restricted)$Master.Protein.Accession == protein_of_interest] %>%
+    exprs() %>%
+    data.frame() %>%
+    tibble::rownames_to_column('id') %>%
+    pivot_longer(cols = -id) %>%
+    ggplot(aes(x = name, y = value)) +
+    geom_line(aes(group = id), colour = 'grey', alpha = 0.5) +
+    geom_point(colour = 'grey', alpha = 0.5) +
+    geom_line(data = to_plot_compare,
+              aes(x = sample.id, y = abundance, colour = method, group = method)) +
+    geom_point(data = to_plot_compare,
+               aes(x = sample.id, y = abundance, colour = method)) +
+    scale_colour_manual(values = get_cat_palette(2), name = 'LFQ summarisation method') +
+    theme_camprot(base_size = 15, border = FALSE, base_family = 'sans') +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+    labs(
+      title = protein_of_interest,
+      x = '',
+      y = 'Protein abundance (log2)'
+    )
+}
+```
+
+
+Below, we apply the above function to each of our proteins of interest.
+
+```{r, warning=FALSE, fig.fullwidth=TRUE, fig.height=4, fig.width=7}
+proteins_of_interest %>% lapply(plot_pep_and_protein)
+```
+
+Looking at these examples, we can see that MaxLFQ is often estimating slightly higher abundances but with a very similar profile across the samples is very similar, so the summarisation approach is unlikely to affect the downstream analysis. It's not clear which of the two approaches is more correct in the examples above, but the publication proposing the robust protein inference (see [here](https://pubmed.ncbi.nlm.nih.gov/32321741/)) does indicate it gives more accurate fold-change estimates overall.

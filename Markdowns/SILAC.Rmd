@@ -567,28 +567,6 @@ MSnbase::plotNA(prot_res, pNA = 0)
 ```
 
 
-> ### Exercise 5
->
-> We have used `MSnbase::plotNA` to assess the missing values but it's 
-> straightforward to do this ourselves directly from the `prot_res` object.
-> Remembering that `exprs()` can be used to extract the `assayData` abundance
-> matrix from an `MSnSet`, answer the following:
->
-> 1. How many values are missing in total?
-> 2. What fraction of values are missing?
-> 3. How many missing values are there in each sample?
-> 4. How many proteins have exactly 1 missing value?
-
-
-### Solution
-```{r class.source = 'fold-hide'}
-
-sum(is.na(prot_res)) #1
-mean(is.na(prot_res)) #2
-colSums(is.na(prot_res)) #3 
-table(rowSums(is.na(prot_res))) #4
-```
-
 At this point, we have obtained an `MSnSet` containing protein-level ratios for
 each sample. You will likely wish to perform bespoke visualisations and statistical
 analyses from this point.

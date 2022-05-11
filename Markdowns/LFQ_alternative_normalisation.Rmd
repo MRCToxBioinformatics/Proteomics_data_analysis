@@ -1,0 +1,189 @@
+---
+title: "Alternative normalisation - Using reference proteins"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+Here, we consider an alternative normalisation approach where we have a strong prior expectation about the abundance of a subset of proteins. Our data is from an RNase +/- OOPS experiment. Since OOPS is known to enrich glycoproteins at the interface, we can use these proteins as an internal set of 'housekeeping' proteins which we expect to have no difference in abundance between RNase +/-.
+
+### Load dependencies
+
+Load the required libraries.
+```{r setup, message=FALSE, warning=FALSE}
+
+library(ggplot2)
+library(MSnbase)
+library(biobroom)
+library(camprotR)
+library(Proteomics.analysis.data)
+library(dplyr)
+library(tidyr)
+
+```
+
+
+```{r}
+prot_robust <- readRDS('results/lfq_prot_robust.rds')
+```
+
+First, we need to calculate the RNase +/- ratios, since this is the value we want to normalise. In other applications, you may wish to normalise the abundance estimates for each sample, rather than the ratio between samples.
+
+```{r}
+ratios <- exprs(prot_robust[,pData(prot_robust)$Condition == 'RNase_neg']) - 
+  exprs(prot_robust[,pData(prot_robust)$Condition == 'RNase_pos'])
+
+prot_ratios <- MSnSet(exprs = ratios,
+                      fData = fData(prot_robust),
+                      pData = (pData(prot_robust) %>% filter(Condition == 'RNase_neg')))
+```
+
+Next, we need annotations regarding which proteins are glycoproteins and GO-annotated RBPs. [Once a notebook has been added to cover GO annotations, reference to that here to avoid repeating explanations about why we want to expand the set of GO anntotations]
+
+Get all GO terms for our proteins by querying UniProt programmatically.
+
+```{r}
+up_url <- "https://www.uniprot.org/uploadlists/"
+
+request <- list(
+  query = paste(rownames(prot_robust), collapse = " "),
+  from = "ACC+ID",
+  to = "ACC",
+  format = "tab",
+  columns = paste("id", "features", "go-id", sep = ",")
+)
+
+response <- httr::GET(url = up_url, query = request)
+
+res <- httr::content(response, type = "text", encoding = "UTF8") %>% 
+  read.table(text = ., sep = "\t", header = TRUE) %>% 
+  select(Entry, Features, Gene.ontology.IDs)
+```
+
+```{r}
+go_long <- res %>% 
+  separate_rows(Gene.ontology.IDs, sep = "; ")
+
+# This step may take a minute or two
+go_all <- get_ancestor_go(
+  go_long, 
+  feature_col = "Entry",
+  go_col = "Gene.ontology.IDs",
+  verbose = TRUE
+)
+```
+
+```{r}
+# Get RBPs
+go_rbp <- "GO:0003723"
+
+rbps <- go_all %>% 
+  filter(Gene.ontology.IDs == go_rbp) %>% 
+  pull(Entry)
+```
+
+```{r}
+# Get glycoproteins
+glycoproteins <- res %>% 
+  filter(grepl("Glycosylation", Features)) %>%
+  mutate(Glyco.features = Features) %>%
+  separate_rows(Glyco.features, sep = "; ") %>%
+  filter(grepl("Glycosylation", Glyco.features)) %>%
+  mutate(Glyco.features = gsub("\\(|\\)", "", Glyco.features)) %>%
+  separate(Glyco.features, into = c(NA, "Glycosylation.count"), sep = " ") %>%
+  select(Entry, Glycosylation.count)
+```
+
+Add feature columns describing the glycoprotein and GO-RBP status of the proteins.
+
+```{r}
+fData(prot_ratios) <- fData(prot_ratios) %>%
+  mutate(Glycoprotein = rownames(prot_ratios) %in% glycoproteins$Entry) %>%
+  mutate(GO.RBP = rownames(prot_ratios) %in% rbps) %>%
+  mutate(Glyco.RBP = interaction(Glycoprotein, GO.RBP)) %>%
+  mutate(Glyco.RBP = factor(recode(
+    Glyco.RBP,
+    'TRUE.TRUE'='GO:RBGP',
+    'FALSE.TRUE'='GO:RBP',
+    'TRUE.FALSE'='Glycoprotein',
+    'FALSE.FALSE'='Other'),
+    levels = c('GO:RBP', 'GO:RBGP', 'Other', 'Glycoprotein'))
+  )
+
+```
+
+Below, we define a function to plot the ratios for each functional sub-type of proteins.
+
+```{r}
+plot_ratios <- function(obj) {
+  to_plot <- merge(
+    exprs(obj),
+    fData(obj)[,'Glyco.RBP',drop = FALSE],
+    by = 'row.names'
+  ) %>%
+    pivot_longer(cols = -c(Row.names, Glyco.RBP), names_to = 'sample', values_to = 'ratio') %>%
+    merge(pData(obj), by.x = 'sample', by.y = 'row.names') %>%
+    filter(is.finite(ratio))
+  
+  p <- to_plot %>% 
+    ggplot(aes(x = Replicate, y = ratio, 
+               group = interaction(Glyco.RBP, Replicate), 
+               colour = factor(Glyco.RBP))) +
+    geom_boxplot(position = position_dodge()) +
+    theme_camprot(border = FALSE, base_family = 'sans', base_size = 15) +
+    scale_colour_manual(values = c(get_cat_palette(3), 'black'), name = '') +
+    geom_hline(yintercept = 0, linetype = 2, colour = 'grey') +
+    labs(
+      x = "Replicate",
+      y = "RNase -/+ ratio"
+    )
+  
+  print(p)
+  
+  invisible(to_plot)
+}
+
+```
+
+How do the protein ratios look pre-normalisation...
+
+```{r, fig.width=8}
+plot_ratios(prot_ratios)
+```
+
+OK, so the glycoproteins are not centered at zero and there are GO-annotated RBPs with negative log RNase -/+ ratios (as much as ~25% in replicate 2)
+
+Below, we perform the center median normalisation to the set of reference proteins (here, the glycoproteins). 
+
+```{r}
+glycoprotein_medians <- prot_ratios[fData(prot_ratios)$Glyco.RBP == 'Glycoprotein',] %>% 
+  camprotR::get_medians()
+
+prot_ratios_norm <- camprotR::center_normalise_to_ref(
+  prot_ratios,
+  glycoprotein_medians,
+  center_to_zero = TRUE, # We want to center the glycoproteins around zero
+  on_log_scale = TRUE # The quantifications are on a log scale (log2 ratios)
+)
+```
+
+And plot the protein ratios post-normalisation.
+
+```{r, fig.width=8}
+plot_ratios(prot_ratios_norm)
+
+```
+
+Now, the median log2 RNase -/+ ratio for glycoproteins is zero for all replicates and we have far fewer GO-annotated RBPs with negative log RNase -/+ ratios.

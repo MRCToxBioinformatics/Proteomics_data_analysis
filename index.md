@@ -74,6 +74,9 @@ further topics for flavour.
 
 #### Label-Free Quantification (LFQ)
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html)
+- [Comparing robust and maxLFQ summarisation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
+- [Normalisation to a prior expectation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_alternative_normalisation.html)
+
 
 #### Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)
 <img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="30%"/>
