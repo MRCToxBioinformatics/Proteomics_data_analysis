@@ -1,0 +1,154 @@
+---
+title: "Tandem Mass Tags"
+subtitle: "QC PSM-level quantification and summarisation to protein-level abundance"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+### Preamble
+
+Quantitative proteomics using isobaric tagging such as Tandem Mass Tags (TMT) has a considerable benefit over Label-Free Quantification (LFQ) in that up to 16 samples can be quantified for each Peptide Spectrum Match (PSM). This greatly reduces the extent of missing values that may be present between different MS runs due to the limited number of ions that can be fragmented in each run and the associated issue of peptides being identified in only a subset of runs [@http://zotero.org/users/5634351/items/ME322P2A]. As such, it standardises the features quantified in each sample, simplifying the comparison between samples and increasing quantification accuracy of summarised features such as proteins.
+
+However, TMT does suffer from ratio compression, which should be avoiding by performing quantification with SPS MS3 [@http://zotero.org/users/5634351/items/ZK69WYZ2]. Since quantification is performed in MS3, the TMT ions being quantified are therefore relatively low intensity and as such, careful QC of the PSM-level quantification is recommended prior to summarisation to protein-level abundances.
+
+Here, we will assess the following:
+
+- The overall distribution of tag intensities
+
+- How signal:noise relates to missing values 
+
+We will then:
+
+- Filter the PSMs based on signal:noise and co-isolation/interference
+
+- Summarise to protein-level abundances
+
+
+```{r, message=FALSE}
+library(camprotR)
+library(MSnbase)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+```
+
+
+### Input data
+
+We start by reading in a file containing PSM-level output from Proteome Discoverer (PD). Here we are using a truncated file containing the first 5,000 PSMs only.
+
+The data we will use is available through the `Proteomics.analysis.data` package.
+```{r}
+psm_data <- read.delim(
+  system.file("extdata", 'benchmark_TMT', 'benchmark_TMT_PSMs.txt.gz',
+              package = "Proteomics.analysis.data"))
+```
+
+
+The first step is to remove contaminant proteins. These were defined using the cRAP database. Below, we parse the cRAP fasta to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+```{r}
+crap_fasta_inf <- system.file(
+  "extdata", "cRAP_20190401.fasta.gz", 
+  package = "camprotR"
+)
+
+# Load the cRAP FASTA used for the PD search
+crap.fasta <- Biostrings::fasta.index(crap_fasta_inf, seqtype = "AA")
+
+# Extract the non cRAP UniProt accessions associated with each cRAP protein
+crap.accessions <- crap.fasta %>% 
+  pull(desc) %>% 
+  stringr::str_extract_all(pattern = "(?<=\\|).*?(?=\\|)") %>% 
+  unlist()
+```
+
+We can then supply these cRAP protein IDs to `parse_features` which will remove features which may originate from contaminants, as well as features which don't have a unique master protein. See `?parse_features` for further details, including the removal of 'associated cRAP'.
+```{r}
+psm_data_flt <- parse_features(
+  psm_data, 
+  crap_proteins = crap.accessions, 
+  TMT = TRUE, 
+  level = 'PSM'
+)
+```
+
+We now store the filtered PSM data in an MSnSet, the standard data object for proteomics in R. See the MSnSet vignette for more details.
+```{r}
+# Abundance columns for TMT PD-output start with Abundance 
+abundance_cols <- colnames(psm_data_flt)[grepl('Abundance.', colnames(psm_data_flt))]
+
+psm.e <- as.matrix(psm_data_flt[, abundance_cols])
+psm.f <- psm_data_flt[, setdiff(colnames(psm_data_flt), abundance_cols)]
+
+# update the column names to remove the 'Abundance.` prefix
+colnames(psm.e) <- gsub('Abundance.', '', colnames(psm.e))
+
+# we don't have 'phenotype' data to add so we just define the 
+# 'expression' data and 'feature' data
+psm <- MSnbase::MSnSet(exprs = psm.e, fData = psm.f)
+```
+
+### Intensity distributions
+```{r, fig.height=5, fig.width=5, fig.fullwidth=TRUE, fig.cap="TMT intensities"}
+plot_quant(log(psm, base=2), method='density')
+```
+# Removing low quality PSMs
+We want to remove low Signal:Noise (S:N) PSMs, since the quantification values will be less accurate and there will be more missing values. We can inspect the relationship between S:N and missing values using the `plot_missing_SN` function.
+
+Note that where the signal:noise > 10, there are far fewer missing values.
+```{r, fig.height=5, fig.width=7, fig.fullwidth=TRUE, fig.cap="Missing values per PSM, in relation to the signal:noise ratio"}
+plot_missing_SN(psm, bins = 40)
+```
+
+We can also look into this relationship at the tag level using `plot_missing_SN_per_sample`. In this case, there is no tag which appears to have a high proportion of missing values when signal:noise > 40.
+```{r, fig.height=5, fig.width=7, fig.fullwidth=TRUE, fig.cap="Missing values per tag, in relation to the signal:noise ratio"}
+plot_missing_SN_per_sample(psm, bins = 40)
+```
+
+Based on the above, we will filter the PSMs to only retain those with S:N > 5 using `filter_TMT_PSMs`. Using the same function, we will also remove PSMs with interference/co-isolation >50%.
+```{r}
+psm_filt_sn_int <- filter_TMT_PSMs(psm, inter_thresh = 50, sn_thresh = 5)
+```
+
+
+# Summarising to protein-level abundances
+Now that we have inspected the PSM-level quantification and filtered the PSMs, we can summarise the PSMs to protein-level abundances. 
+
+For PSM to protein summarisation, we will use naive 'sum' summarisation (`MSnbase::combineFeatures(method = 'sum')`). This approach can not handle missing values, but we have so few that we can simply remove them. 
+
+Here, we will remove PSMs with any missing values
+```{r, fig.height=5, fig.width=5, fig.fullwidth=TRUE, fig.cap="Tally of PSMs per protein"}
+psm_filt_sn_int_missing <- psm_filt_sn_int %>% 
+  MSnbase::filterNA()
+```
+
+Below, we perform the summarisation. 
+```{r}
+protein <- psm_filt_sn_int_missing %>%
+  MSnbase::combineFeatures(
+    groupBy = fData(psm_filt_sn_int_missing)$Master.Protein.Accession,
+    method = 'sum')
+
+
+
+```
+
+To add 
+- Filtering by PSMs per protein
+- imputation notebook
+- statistical testing notebook
+
+# References
+
