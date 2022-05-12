@@ -1,5 +1,6 @@
 ---
-title: "Alternatives for summarising to protein-level abundance - MaxLFQ"
+title: "Label-free Quantification Proteomics"
+subtitle: "Alternatives for summarising to protein-level abundance - MaxLFQ"
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:
@@ -31,8 +32,10 @@ library(tidyr)
 
 ```
 
-Although we recommend using the 'robust' summarisation, there are other algorithms that are commonly applied. For example MaxLFQ [@http://zotero.org/users/5634351/items/87YIDK69], which is implemented within MaxQuant, but also available via the `iq::maxLFQ()` function in the iq package in R (now available on [CRAN](https://cran.r-project.org/web/packages/iq/index.html)). 
+Although we recommend using the 'robust' summarisation, as demonstrated in the [LFQ Data processing and QC notebook](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html), there are other algorithms that are commonly applied. For example MaxLFQ [@http://zotero.org/users/5634351/items/87YIDK69], which is implemented within MaxQuant, but also available via the `maxLFQ()` function in the `iq` package.
 
+
+We start by reading in the peptide-level quantification we created in the [LFQ Data processing and QC notebook](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html). We'll use the same filtered peptides we used for the robust summarisation, so we can directly compare between the summarisation methods.
 ```{r}
 pep_restricted <- readRDS('results/lfq_pep_restricted.rds')
 
@@ -42,8 +45,6 @@ pep_restricted <- readRDS('results/lfq_pep_restricted.rds')
 # You may wish to retain more feature columns that this in your experimental data!
 feature_coloumns_to_retain <- c("Master.Protein.Accessions")
 
-# To ensure we are only comparing the protein inference method and not normalisation etc,
-# we will use the same set of peptides for both inference methods
 pep_data_for_summarisation <- pep_restricted %>%
   exprs() %>%
   data.frame() %>%
@@ -88,9 +89,13 @@ rownames(prot_maxlfq) <- maxlfq_estimates$Master.Protein.Accessions
 ```
 
 
+## Comparing robust and maxLFQ
+We can now compare the protein-level abundance estimates. First we read in the protein-level abundance estimates we obtained with robust summarisation.
+```{r}
+prot_robust <- readRDS('results/lfq_prot_robust.rds')
+```
 
-We can now compare the protein-level abundance estimates.
-
+And then we combine the summarisations from the two approaches.
 ```{r, warning=FALSE, fig.height=3, fig.width=5, fig.fullwidth=TRUE, fig.cap="Comparison of protein inference methods"}
 # Define a function to extract the protein abundances in long form and
 # add a column annotating the method
@@ -107,7 +112,7 @@ compare_protein_abundances <- rbind(
 )
 ```
 
-> ### Exercise 2
+> ### Exercise
 > Compare the protein-abundance estimates using 'robust' and 'maxLFQ' using a
 > scatter plot (see example below but don't worry if it doesn't exactly match).
 > What does you conclude.
@@ -117,6 +122,7 @@ compare_protein_abundances <- rbind(
 
 
 ### Solution
+
 ```{r class.source = 'fold-hide', echo=FALSE}
 # Plot direct comparison
 compare_protein_abundances %>%
@@ -190,3 +196,12 @@ proteins_of_interest %>% lapply(plot_pep_and_protein)
 ```
 
 Looking at these examples, we can see that MaxLFQ is often estimating slightly higher abundances but with a very similar profile across the samples is very similar, so the summarisation approach is unlikely to affect the downstream analysis. It's not clear which of the two approaches is more correct in the examples above, but the publication proposing the robust protein inference (see [here](https://pubmed.ncbi.nlm.nih.gov/32321741/)) does indicate it gives more accurate fold-change estimates overall.
+
+
+## Session info {.unnumbered}
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
+
+## References {.unnumbered}

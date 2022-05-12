@@ -70,17 +70,15 @@ covering data processing and QC which starts from the Proteome Discoverer (PD)
 output files and performs filtering, quality control and data processing to
 obtain the desired quantification data from which one can perform further
 visualisation or statistical testing. Additional notebooks are included to cover
-further topics for flavour.
+further topics for each flavour.
 
 #### Label-Free Quantification (LFQ)
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html)
-- [Comparing robust and maxLFQ summarisation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
-- [Normalisation to a prior expectation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_alternative_normalisation.html)
+- [Comparing robust and maxLFQ summarisation to protein-level abundances](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
+- [An alternative normalisation using a prior expectation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_alternative_normalisation.html)
 
 
 #### Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)
-<img src="https://www.creative-proteomics.com/blog/wp-content/uploads/2018/12/SILAC-Principle-12.png" width="30%"/>
-
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html)
 - [Differential abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
 - [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
@@ -88,6 +86,7 @@ further topics for flavour.
 #### [Tandem-Mass Tags (TMT) (Coming soon)]()
 
 <img src="https://www.creative-proteomics.com/images/TMT-Based-Proteomics-Service.png" width="30%"/>
+
 
 
 

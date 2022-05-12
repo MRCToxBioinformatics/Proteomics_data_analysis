@@ -1,5 +1,6 @@
 ---
-title: "Alternative normalisation - Using reference proteins"
+title: "Label-free Quantification Proteomics"
+subtitle: "Alternative normalisation - Using reference proteins"
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:
@@ -16,8 +17,11 @@ knitr::opts_chunk$set(
 )
 ```
 
+With Label-Free Quantification, it's usually appropriate to apply a naive normalisation such as 'center-median' normalisation, (`diff.median` in `MSnbase::normalise`) or Trimmed Mean of the M-values (TMM) normalisation. This is on the basis that the quantification should be relative to the total amount of protein in each sample.
 
-Here, we consider an alternative normalisation approach where we have a strong prior expectation about the abundance of a subset of proteins. Our data is from an RNase +/- OOPS experiment. Since OOPS is known to enrich glycoproteins at the interface, we can use these proteins as an internal set of 'housekeeping' proteins which we expect to have no difference in abundance between RNase +/-.
+There are occasions when you will want to normalisation to a set of reference proteins, for example endogenous 'house-keeping' proteins, or exogenous spiked in proteins.
+
+Here, we consider yet another normalisation approach where we have a strong prior expectation about the abundance ratio of a subset of proteins between two conditions. Our data is from the [LFQ Data processing and QC notebook](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html). Please see the previous notebook for an explanation of the experiment. The important point here is that OOPS is known to enrich glycoproteins at the interface. We can therefore use these proteins as an internal set of reference proteins which we expect to have no difference in abundance between RNase +/-.
 
 ### Load dependencies
 
@@ -34,13 +38,14 @@ library(tidyr)
 
 ```
 
+### Load data
 
+We start by reading in the protein-level quantification we created in the [LFQ Data processing and QC notebook](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html)
 ```{r}
 prot_robust <- readRDS('results/lfq_prot_robust.rds')
 ```
 
-First, we need to calculate the RNase +/- ratios, since this is the value we want to normalise. In other applications, you may wish to normalise the abundance estimates for each sample, rather than the ratio between samples.
-
+First, we need to calculate the RNase +/- ratios, since this is the value we want to normalise in this case.
 ```{r}
 ratios <- exprs(prot_robust[,pData(prot_robust)$Condition == 'RNase_neg']) - 
   exprs(prot_robust[,pData(prot_robust)$Condition == 'RNase_pos'])
@@ -50,9 +55,13 @@ prot_ratios <- MSnSet(exprs = ratios,
                       pData = (pData(prot_robust) %>% filter(Condition == 'RNase_neg')))
 ```
 
-Next, we need annotations regarding which proteins are glycoproteins and GO-annotated RBPs. [Once a notebook has been added to cover GO annotations, reference to that here to avoid repeating explanations about why we want to expand the set of GO anntotations]
+### Get annotations for glycoproteins and GO-'RNA binding'
 
-Get all GO terms for our proteins by querying UniProt programmatically.
+Next, we need annotations regarding which proteins are glycoproteins and GO-annotated RBPs. 
+
+Here, we query UniProt programmatically to obtain the GO terms and features for our proteins, which we will further parse to determine the GO-RBPs and glycoproteins.
+
+You can skip over the details of this section as the important point is just that we have obtained the required glycoprotein and RNA-binding annotations.
 
 ```{r}
 up_url <- "https://www.uniprot.org/uploadlists/"
@@ -72,30 +81,26 @@ res <- httr::content(response, type = "text", encoding = "UTF8") %>%
   select(Entry, Features, Gene.ontology.IDs)
 ```
 
-```{r}
-go_long <- res %>% 
-  separate_rows(Gene.ontology.IDs, sep = "; ")
-
-# This step may take a minute or two
-go_all <- get_ancestor_go(
-  go_long, 
-  feature_col = "Entry",
-  go_col = "Gene.ontology.IDs",
-  verbose = TRUE
-)
-```
+Get the GO-RBPs
 
 ```{r}
-# Get RBPs
+# GO term for RNA-binding
 go_rbp <- "GO:0003723"
 
-rbps <- go_all %>% 
-  filter(Gene.ontology.IDs == go_rbp) %>% 
-  pull(Entry)
+# All offspring (since some proteins will only be annotated with an offspring term)
+go_rbp_offspring <- AnnotationDbi::get("GO:0003723", GO.db::GOMFOFFSPRING)
+
+# Identify all GO-RBPs
+rbps<- res %>%
+  separate_rows(Gene.ontology.IDs, sep='; ') %>%
+  filter(Gene.ontology.IDs %in% c(go_rbp, go_rbp_offspring)) %>% 
+  pull(Entry) %>%
+  unique()
 ```
 
+Get the glycoproteins
+
 ```{r}
-# Get glycoproteins
 glycoproteins <- res %>% 
   filter(grepl("Glycosylation", Features)) %>%
   mutate(Glyco.features = Features) %>%
@@ -124,7 +129,7 @@ fData(prot_ratios) <- fData(prot_ratios) %>%
 
 ```
 
-Below, we define a function to plot the ratios for each functional sub-type of proteins.
+Finally, we define a function to plot the ratios for each functional sub-type of proteins.
 
 ```{r}
 plot_ratios <- function(obj) {
@@ -157,7 +162,9 @@ plot_ratios <- function(obj) {
 
 ```
 
-How do the protein ratios look pre-normalisation...
+### Normalising against the glycoproteins
+
+Now we have everything in place, we can look at how the protein ratios look pre-normalisation...
 
 ```{r, fig.width=8}
 plot_ratios(prot_ratios)
@@ -165,7 +172,7 @@ plot_ratios(prot_ratios)
 
 OK, so the glycoproteins are not centered at zero and there are GO-annotated RBPs with negative log RNase -/+ ratios (as much as ~25% in replicate 2)
 
-Below, we perform the center median normalisation to the set of reference proteins (here, the glycoproteins). 
+Below, we perform the center-median normalisation with respect to the reference proteins (here, the glycoproteins). 
 
 ```{r}
 glycoprotein_medians <- prot_ratios[fData(prot_ratios)$Glyco.RBP == 'Glycoprotein',] %>% 
@@ -187,3 +194,12 @@ plot_ratios(prot_ratios_norm)
 ```
 
 Now, the median log2 RNase -/+ ratio for glycoproteins is zero for all replicates and we have far fewer GO-annotated RBPs with negative log RNase -/+ ratios.
+
+## Session info {.unnumbered}
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
+
+## References {.unnumbered}
+

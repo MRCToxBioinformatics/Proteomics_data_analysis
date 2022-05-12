@@ -1,5 +1,6 @@
 ---
 title: "Label-free Quantification Proteomics"
+subtitle: 'Data processing and QC'
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:
@@ -37,22 +38,23 @@ library(tidyr)
 
 ```
 
-# Input data
+## Input data
 
 We start with the peptide-level output from Proteome Discoverer (PD). This experiment was designed to identify RNA-binding proteins (RBP) in the U-2 OS cell line using the OOPS method [@http://zotero.org/users/5634351/items/EJHWF46N] with a comparison of RNase +/- used to separate RBPs from background non-specific proteins. 4 replicate experiments were performed, where the RNase +/- experiments were performed from the same OOPS interface. For each LFQ run, approximately the same quantity of peptides were injected, based on quantification of peptide concentration post trypsin digestion. This data is not published but the aim of the experiment is equivalent to Figure 2e in the original OOPS paper[@http://zotero.org/users/5634351/items/EJHWF46N].  
 
 The data we will use is available through the `Proteomics.analysis.data` package.
 ```{r}
-pep_data <- read.delim(system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_PeptideGroups.txt', package = "Proteomics.analysis.data"))
+pep_data <- read.delim(
+  system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_PeptideGroups.txt',
+              package = "Proteomics.analysis.data"))
 ```
 
 We can explore the structure of the input data using `str`. We see that we have a `data.frame()` with `r nrow(pep_data)` rows and `r ncol(pep_data)` columns. The most important columns to us are:
 
-- Sequence: The sequence of the peptide
-- Modifications: The detected peptide modifications, including variable, e.g induced modifications such as oxidation
-- Master.Protein.Accessions: The assigned master protein(s)
-- Abundance.F*.Sample: Columns with the peptide intensities
-
+- **Sequence**: The sequence of the peptide
+- **Modifications**: The detected peptide modifications, including variable, e.g induced modifications such as oxidation
+- **Master.Protein.Accessions**: The assigned master protein(s)
+- **Abundance.F\*.Sample**: Columns with the peptide intensities
 
 ```{r}
 str(pep_data)
@@ -62,18 +64,17 @@ str(pep_data)
 >
 > Examine the column names and answer the following:
 >
-> 1. How do the numerical values in the Abundance.F*.Sample columns relate
+> How do the numerical values in the Abundance.F*.Sample columns relate
 > to the conditions (RNase +/-)?
 
-### Solution
-```{r class.source = 'fold-hide'}
-# 1. It's not possible to tell!
-```
 
-The InputFiles.txt file can be used to determine the relationship between the Abundance.F*.Sample columns and the samples.
+The InputFiles.txt file from PD can be used to determine the relationship between the Abundance.F*.Sample columns and the samples. If in any doubt, you can also check with the Proteomics service.
+
 The accompanying `LFQ_OOPS_RNase_InputFiles.txt` file is available through the `Proteomics.analysis.data` package.
 ```{r}
-inputfiles <- read.delim(system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_InputFiles.txt', package = "Proteomics.analysis.data"))
+inputfiles <- read.delim(
+  system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_InputFiles.txt',
+              package = "Proteomics.analysis.data"))
 print(inputfiles %>% filter(Study.File.ID!=''))
 ```
 
@@ -88,6 +89,7 @@ sample_data <- data.frame(
   Replicate = rep(1:4, 2)
 )
 
+# Displaying the table in a nicer format
 knitr::kable(sample_data,
              align = "cccc",
              format = "html",
@@ -134,6 +136,7 @@ From the above, we can see that we have started with `r nrow(pep_data)` 'feature
 We now store the filtered peptide data in an MSnSet, the standard data object for proteomics in R.
 
 This object contains 3 elements:
+
 - A quantification data matrix (rows=features, e.g peptides/proteins, columns=samples)
 - Feature data (rows=features, columns=feature annotations, e.g peptide master protein assignment)
 - Experimental details (rows=samples, columns=experimental details, e.g treatment)
@@ -207,7 +210,7 @@ p <- MSnbase::plotNA(pep, pNA = 0) +
 
 
 
-```{r, fig.height=4, fig.width=5, fig.fullwidth=TRUE, fig.cap="Data completeness, all peptides"}
+```{r, fig.height=4, fig.width=5, fig.fullwidth=TRUE, fig.cap="Peptide-level data completeness"}
 print(p)
 ```
 
@@ -238,7 +241,7 @@ sum(rowSums(is.na(pep))==0) #4
 So, from the `r nrow(pep)` peptides, just `r sum(rowSums(is.na(pep))==0)` have quantification values in all 8 samples. This is not a surprise for LFQ, since each sample is prepared and run separately.
 
 
-We can explore the structure of the missing values further using an 'upset' plot. 
+We can also explore the structure of the missing values further using an 'upset' plot. 
 Here, we use the `naniar` package for this.
 
 ```{r, fig.height=5, fig.width=8, fig.fullwidth=TRUE, fig.cap="Missing values upset plot"}
@@ -258,11 +261,11 @@ So in this case, we can see that the most common missing value patterns are:
 2. Missing in all samples.
 3. Missing in all the other samples, except RNase negative replicate 4
 
-RNase negative replicate 4 had slightly lower overall petide intensities and appears to be somewhat of an outlier. In this case, we will retain the sample but in other cases, this may warrant further exploration and potentially removal of a sample.
+RNase negative replicate 4 had slightly lower overall peptide intensities and appears to be somewhat of an outlier. In this case, we will retain the sample but in other cases, this may warrant further exploration and potentially removal of a sample.
 
 ## Normalise peptide intensities
 
-We have injected the same quantity of peptides for each sample, so it's reasonable to normalise the samples against one another. Here we will apply 'center-median' normalisation, which in `MSnbase::normalise` is called 'diff.median'. Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
+We have injected the same quantity of peptides for each sample, so it's reasonable to normalise the samples against one another. Here we will apply 'center-median' normalisation, which in `MSnbase::normalise` is called `diff.median`. Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
 
 ```{r, fig.height=3, fig.width=5, fig.fullwidth=TRUE, fig.cap="Protein intensities post-normalisation"}
 pep_norm <- pep %>% 
@@ -275,14 +278,19 @@ pep_norm %>%
 
 ## Summarising to protein-level abundance
 
-Before we can summarise to protein-level abundances, we need to exclude peptides with too many missing values. Here, peptides with more than 5/8 missing values are discarded, using `MSnbase::filterNA()`. We also need to remove proteins without at least two peptides. We will use `camprotR::restrict_features_per_protein()` which will replace quantification values with `NA` if the sample does not have two quantified peptides for a given protein. Note that this means we have to repeat the filtering process since we are adding missing values.
+Before we can summarise to protein-level abundances, we need to exclude peptides with too many missing values. Here, peptides with more than 4/8 missing values are discarded, using `MSnbase::filterNA()`. We also need to remove proteins without at least two peptides. We will use `camprotR::restrict_features_per_protein()` which will replace quantification values with `NA` if the sample does not have two quantified peptides for a given protein. Note that this means we have to repeat the filtering process since we are adding missing values.
 
 ```{r}
 pep_restricted <- pep_norm %>%
-  MSnbase::filterNA(pNA = 4/8) %>% # Maximum 4/8 missing values
-  camprotR::restrict_features_per_protein(min_features = 2, plot = FALSE) %>% # At least two peptides per protein
+  # Maximum 4/8 missing values
+  MSnbase::filterNA(pNA = 4/8) %>% 
+  
+  # At least two peptides per protein
+  camprotR::restrict_features_per_protein(min_features = 2, plot = FALSE) %>% 
+  
   # Repeat the filtering since restrict_features_per_protein will replace some values with NA
   MSnbase::filterNA(pNA = 4/8) %>% 
+  
   camprotR::restrict_features_per_protein(min_features = 2, plot = FALSE) 
 ```
 
@@ -293,7 +301,9 @@ p <- MSnbase::plotNA(pep_restricted, pNA = 0) +
   camprotR::theme_camprot(border = FALSE, base_family = 'sans', base_size = 15) +
   labs(x = 'Peptide index')
 ```
-```{r, fig.width=6, fig.height=4, fig.fullwidth=TRUE, fig.cap="Data completeness, retained peptides"}
+
+
+```{r, fig.width=6, fig.height=4, fig.fullwidth=TRUE, fig.cap="Peptide-level data completeness for retained peptides"}
 print(p)
 ```
 
