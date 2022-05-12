@@ -463,7 +463,7 @@ library(dplyr)</code></pre>
 </div>
 <div id="input-data" class="section level3">
 <h3>Input data</h3>
-<p>We start by reading in a file containing PSM-level output from Proteome Discoverer (PD). Here we are using a truncated file containing the first 5,000 PSMs only.</p>
+<p>We start by reading in a file containing PSM-level output from Proteome Discoverer (PD).</p>
 <p>The data we will use is available through the <code>Proteomics.analysis.data</code> package.</p>
 <pre class="r"><code>psm_data &lt;- read.delim(
   system.file(&quot;extdata&quot;, &#39;benchmark_TMT&#39;, &#39;benchmark_TMT_PSMs.txt.gz&#39;,
@@ -561,7 +561,7 @@ Missing values per tag, in relation to the signal:noise ratio
     groupBy = fData(psm_filt_sn_int_missing)$Master.Protein.Accession,
     method = &#39;sum&#39;)
 </code></pre>
-<p>To add - Filtering by PSMs per protein - imputation notebook - statistical testing notebook</p>
+<p>To add - Details about the experiment - Filtering by PSMs per protein - imputation notebook - statistical testing notebook</p>
 </div>
 <div id="references" class="section level1 unnumbered">
 <h1>References</h1>

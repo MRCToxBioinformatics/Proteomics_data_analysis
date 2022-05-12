@@ -83,7 +83,7 @@ further topics for each flavour.
 - [Differential abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
 - [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
 
-#### [Tandem-Mass Tags (TMT) (Coming soon)]()
+#### Tandem-Mass Tags (TMT)
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html)
 
 

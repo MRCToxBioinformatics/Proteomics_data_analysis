@@ -47,7 +47,7 @@ library(dplyr)
 
 ### Input data
 
-We start by reading in a file containing PSM-level output from Proteome Discoverer (PD). Here we are using a truncated file containing the first 5,000 PSMs only.
+We start by reading in a file containing PSM-level output from Proteome Discoverer (PD). 
 
 The data we will use is available through the `Proteomics.analysis.data` package.
 ```{r}
@@ -146,6 +146,7 @@ protein <- psm_filt_sn_int_missing %>%
 ```
 
 To add 
+- Details about the experiment
 - Filtering by PSMs per protein
 - imputation notebook
 - statistical testing notebook
