@@ -15,7 +15,7 @@ LazyDataCompression: bzip2
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Remotes: 
-    CambridgeCentreForProteomics/camprotR
+    CambridgeCentreForProteomics/camprotR,
     mrctoxbioinformatics/Proteomics.analysis.data
 biocViews:
 Imports: 
