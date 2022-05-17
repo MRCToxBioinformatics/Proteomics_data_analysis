@@ -628,5 +628,61 @@
 				]
 			]
 		}
+	},
+	{
+		"id": "http://zotero.org/users/5634351/items/LG3W8G4T",
+		"type": "article-journal",
+		"abstract": "Tandem mass tags (TMTs) enable simple and accurate quantitative proteomics for multiplexed samples by relative quantification of tag reporter ions. Orbitrap quantification of reporter ions has been associated with a characteristic notch region in intensity distribution, within which few reporter intensities are recorded. This has been resolved in version 3 of the instrument acquisition software Tune. However, 47% of Orbitrap Fusion, Lumos, or Eclipse submissions to PRIDE were generated using prior software versions. To quantify the impact of the notch on existing quantitative proteomics data, we generated a mixed species benchmark and acquired quantitative data using Tune versions 2 and 3. Intensities below the notch are predominantly underestimated with Tune version 2, leading to overestimation of the true differences in intensities between samples. However, when summarizing reporter ion intensities to higher-level features, such as peptides and proteins, few features are significantly affected. Targeted removal of spectra with reporter ion intensities below the notch is not beneficial for differential peptide or protein testing. Overall, we find that the systematic quantification bias associated with the notch is not detrimental for a typical proteomics experiment.",
+		"container-title": "ACS Measurement Science Au",
+		"DOI": "10.1021/acsmeasuresciau.1c00053",
+		"journalAbbreviation": "ACS Meas. Au",
+		"note": "publisher: American Chemical Society",
+		"source": "ACS Publications",
+		"title": "Prior Signal Acquisition Software Versions for Orbitrap Underestimate Low Isobaric Mass Tag Intensities, Without Detriment to Differential Abundance Experiments",
+		"URL": "https://doi.org/10.1021/acsmeasuresciau.1c00053",
+		"author": [
+			{
+				"family": "Smith",
+				"given": "Tom S."
+			},
+			{
+				"family": "Andrejeva",
+				"given": "Anna"
+			},
+			{
+				"family": "Christopher",
+				"given": "Josie"
+			},
+			{
+				"family": "Crook",
+				"given": "Oliver M."
+			},
+			{
+				"family": "Elzek",
+				"given": "Mohamed"
+			},
+			{
+				"family": "Lilley",
+				"given": "Kathryn S."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2022",
+					5,
+					17
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2022",
+					3,
+					9
+				]
+			]
+		}
 	}
 ]
