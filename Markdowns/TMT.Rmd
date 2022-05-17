@@ -152,10 +152,35 @@ protein <- psm_filt_sn_int_missing %>%
 
 ```
 
+Finally, we assess the quantification distribution and normalise the protein-level abundances
+```{r}
+plot_quant(log(protein, base=2), method='density')
+```
+For this dataset, we see that the protein-level intensity distributions are very similar.
+This benchmark experiment was performed by generating 10 samples from defined mixes of
+2 peptide samples (human and yeast). As such, we expect near identical distributions for
+all samples from the same group. In a typical TMT experiment, you may see more variable distributions.
+
+Regardless, the next step should be to normalise the protein-level intensities. 
+Here we will apply 'center-median' normalisation, which in `MSnbase::normalise` is called `diff.median`.
+Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
+
+
+```{r}
+protein_norm <- MSnbase::normalise(log(protein, base=2), method='diff.median')
+
+plot_quant(protein_norm, method='density')
+```
+
+Remember that we can check the processing information for our MSnSet if we are in doubt about the processing. Here, it tells us that we log2 transformed and then used `diff.median` normalisation.
+```{r}
+processingData(protein_norm)
+```
 
 
 To add 
 - statistical testing notebook
+- TMM normalisation
 
 # References
 

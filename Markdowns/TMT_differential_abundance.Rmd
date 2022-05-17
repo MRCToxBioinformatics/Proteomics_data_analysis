@@ -1,0 +1,59 @@
+---
+title: "Tandem Mass Tags"
+subtitle: "Differential abundance statistical testing"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+### Preamble
+
+There are a number of statistical tests/R packages one can use to perform differential abundance testing for proteomics data. The list below is by no means complete:
+
+- **t-test**: If we assume that the log-transformed SILAC ratios are Gaussian
+distributed, a t-test may be appropriate when we have just one condition
+(ratio is comparison of conditions = one-sample t-test) or two conditions
+(ratio captures one condition, with another condition performed across samples = two-sample t-test)
+- **ANOVA/linear model**: Where a more complex experimental design is involved,
+an ANOVA or linear model can be used, on the same assumptions at the t-test.
+- **`limma`** [@http://zotero.org/users/5634351/items/6KTXTWME]: Proteomics experiments are typically lowly replicated (e.g n << 10).
+Variance estimates are therefore inaccurate. `limma`  is an R package that extends
+the t-test/ANOVA/linear model testing framework to enable sharing of information
+across features (here, proteins) to update the variance estimates. This decreases
+false positives and increases statistical power.
+- **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]: limma assumes there is a relationship between protein abundance and
+variance. This is usually the case, although
+  - The relationship with variance is often stronger with the number of
+  peptide spectrum matches, or peptides
+  
+As such, `DEqMS` is preferred over limma for TMT data.
+  
+
+Here, we will apply each all the above tests to the same data set and compare the results.
+
+
+```{r, message=FALSE}
+library(camprotR)
+library(MSnbase)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+```
+
+
+### Input data
+
+We start by reading in a file containing PSM-level output from Proteome Discoverer (PD). This data comes from a published benchmark experiment where yeast peptides were spiked into human peptides at 3 known amounts to provide ground truth fold changes (see below). Two versions of Orbitrap control software were tested, with v3 shown to improve fold-change estimation for low intensity peptides. Here, we will use the data obtained with v3. For more details, see: [@http://zotero.org/users/5634351/items/LG3W8G4T]
+
+<img src="https://github.com/CambridgeCentreForProteomics/notch/blob/master/images/toc.png?raw=true" width="70%"/>

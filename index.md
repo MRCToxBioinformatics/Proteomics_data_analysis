@@ -93,7 +93,7 @@ further topics for each flavour.
 
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html)
 
-- [Differential abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
+- [Differential abundance statistical testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
 
 - [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
 
