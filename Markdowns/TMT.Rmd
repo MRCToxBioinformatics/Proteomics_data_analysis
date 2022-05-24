@@ -99,7 +99,10 @@ colnames(psm.e) <- gsub('Abundance.', '', colnames(psm.e))
 
 # we don't have 'phenotype' data to add so we just define the 
 # 'expression' data and 'feature' data
-psm <- MSnbase::MSnSet(exprs = psm.e, fData = psm.f)
+
+psm.p <- data.frame(spike=rep(factor(c('x1', 'x2', 'x6')), c(4,3,3)), row.names=colnames(psm.e))
+  
+psm <- MSnbase::MSnSet(exprs = psm.e, fData = psm.f, pData=psm.p)
 ```
 
 Plot intensity distributions
@@ -156,6 +159,7 @@ Finally, we assess the quantification distribution and normalise the protein-lev
 ```{r}
 plot_quant(log(protein, base=2), method='density')
 ```
+
 For this dataset, we see that the protein-level intensity distributions are very similar.
 This benchmark experiment was performed by generating 10 samples from defined mixes of
 2 peptide samples (human and yeast). As such, we expect near identical distributions for
@@ -177,9 +181,15 @@ Remember that we can check the processing information for our MSnSet if we are i
 processingData(protein_norm)
 ```
 
+Now we have filtered our PSM-level quantification, summarised to protein-level and normalised. We can use this object to perform downstream visualisation, data exploration and statistical analysis etc.
+
+We save the object to disk so we can read it back into memory when we need it
+```{r, eval=FALSE}
+saveRDS(protein_norm, './results/tmt_protein.rds')
+```
+
 
 To add 
-- statistical testing notebook
 - TMM normalisation
 
 # References

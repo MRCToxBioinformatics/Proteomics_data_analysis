@@ -64,7 +64,8 @@ the data we will use.
 - - - -
   
 ## Course materials
-The course is broken into sections for different 'flavours' of quantitative
+
+The fist part of the course is broken into sections for different 'flavours' of quantitative
 bottom-up proteomics by Mass-spectrometry. Each section contains a notebook
 covering data processing and QC which starts from the Proteome Discoverer (PD)
 output files and performs filtering, quality control and data processing to
@@ -72,6 +73,10 @@ obtain the desired quantification data from which one can perform further
 visualisation or statistical testing. Additional notebooks are included to cover
 further topics for each flavour.
 
+The second part of the course materials contains
+
+
+### 1. Processing and QC for quantitative MS
 
 #### Tandem-Mass Tags (TMT)
 
@@ -93,9 +98,13 @@ further topics for each flavour.
 
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html)
 
-- [Differential abundance statistical testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_differential_abundance.html)
-
 - [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
+
+
+### 2. Statistical testing and visualisation of quantitative MS
+
+
+- [Statistical testing - differential abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/Stats_diff_abundance.html)
 
 
 

@@ -33,7 +33,8 @@ Imports:
     tidyr,
     gplots,
     iq,
-    Proteomics.analysis.data
+    Proteomics.analysis.data,
+    broom
 Depends: 
     R (>= 2.10)
 URL: https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/
