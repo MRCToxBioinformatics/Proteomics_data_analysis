@@ -359,11 +359,24 @@ silac_compare_tests %>%
   scale_fill_manual(values=c(get_cat_palette(3), 'grey'), name='') +
   labs(x='Minimum peptides per sample', y='Fraction of proteins')
 
-# Note that the 3 proteins which are only significant with the t-test have 
+# Note that the 3 proteins which are only significant with the t-test have a
+# minimum of 1/2 peptides per sample. These are likely to be poorly quantified
+# and falsely identified as CL-enriched.
 ```
 
 
-## LFQ 
+## LFQ
+
+Here, we will start with the LFQ data processed in [Data processing and QC of LFQ data](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html).
+Please see the previous notebook for details of the experimental design and aim and data processing. 
+
+In brief, we wish to determine the proteins which are significantly enriched by UV crosslinking (CL) vs non-CL control (NC).
+
+We will use two approaches:
+- one sample t-test
+- moderated one sample t-test (DEqMS)
+
+First, we read in the protein-level ratios obtained in the above notebooks. We will filter out proteins which are not present in at least 3/4 replicates.
 ```{r}
 lfq_protein <- readRDS('./results/lfq_prot_robust.rds')
 ```
