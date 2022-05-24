@@ -28,7 +28,7 @@ You should be comfortable using `R`. We will be using
 base `R` functions like `lapply`, `gsub`, `file.path`, alongside `tidyverse` functions
 like `group_by`, `mutate` and `ggplot`. If these are not familiar, we recommend 
 undertaking training in `R` and the `tidyverse` beforehand. We recommend using `R>=4.1.2` since
-the material has not been tested on version before this.
+the material has not been tested on earler versions.
     
     The [Bioinformatics](https://www.mrc-tox.cam.ac.uk/facilities/bioinformatics) facility
 provide separate training covering basic `R`, data carpentry (using the `tidyverse`)
@@ -56,7 +56,7 @@ introduction to the principles of bottom-up proteomics by Mass-Spectrometry.
 To ensure all the neccessary R packages are installed for you to run the code,
 you can install the `Protoemics.data.analysis` package like so:
 ``` r
-remotes::install_github("MRCToxBioinformatics/Proteomics_data_analysis/", build_vignettes = TRUE)
+remotes::install_github("MRCToxBioinformatics/Proteomics_data_analysis/", dependencies='Suggests')
 ```
 This will also install the `Proteomics.analysis.data` package which contains
 the data we will use.
