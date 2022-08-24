@@ -8,6 +8,7 @@
 		"ISSN": "1546-1696",
 		"issue": "2",
 		"language": "En",
+		"license": "2019 The Author(s), under exclusive licence to Springer Nature America, Inc.",
 		"page": "169",
 		"source": "www.nature.com",
 		"title": "Comprehensive identification of RNA–protein interactions in any organism using orthogonal organic phase separation (OOPS)",
@@ -681,6 +682,96 @@
 					"2022",
 					3,
 					9
+				]
+			]
+		}
+	},
+	{
+		"id": "http://zotero.org/users/5634351/items/ZG3ASMKX",
+		"type": "article-journal",
+		"abstract": "To date, mass spectrometry (MS) data remain inherently biased as a result of reasons ranging from sample handling to differences caused by the instrumentation. Normalization is the process that aims to account for the bias and make samples more comparable. The selection of a proper normalization method is a pivotal task for the reliability of the downstream analysis and results. Many normalization methods commonly used in proteomics have been adapted from the DNA microarray techniques. Previous studies comparing normalization methods in proteomics have focused mainly on intragroup variation. In this study, several popular and widely used normalization methods representing different strategies in normalization are evaluated using three spike-in and one experimental mouse label-free proteomic data sets. The normalization methods are evaluated in terms of their ability to reduce variation between technical replicates, their effect on differential expression analysis and their effect on the estimation of logarithmic fold changes. Additionally, we examined whether normalizing the whole data globally or in segments for the differential expression analysis has an effect on the performance of the normalization methods. We found that variance stabilization normalization (Vsn) reduced variation the most between technical replicates in all examined data sets. Vsn also performed consistently well in the differential expression analysis. Linear regression normalization and local regression normalization performed also systematically well. Finally, we discuss the choice of a normalization method and some qualities of a suitable normalization method in the light of the results of our evaluation.",
+		"container-title": "Briefings in Bioinformatics",
+		"DOI": "10.1093/bib/bbw095",
+		"ISSN": "1477-4054",
+		"issue": "1",
+		"journalAbbreviation": "Briefings in Bioinformatics",
+		"page": "1-11",
+		"source": "Silverchair",
+		"title": "A systematic evaluation of normalization methods in quantitative label-free proteomics",
+		"URL": "https://doi.org/10.1093/bib/bbw095",
+		"volume": "19",
+		"author": [
+			{
+				"family": "Välikangas",
+				"given": "Tommi"
+			},
+			{
+				"family": "Suomi",
+				"given": "Tomi"
+			},
+			{
+				"family": "Elo",
+				"given": "Laura L"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2022",
+					8,
+					22
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2018",
+					1,
+					1
+				]
+			]
+		}
+	},
+	{
+		"id": "http://zotero.org/users/5634351/items/YY5VWWY7",
+		"type": "article-journal",
+		"abstract": "MOTIVATION: When running experiments that involve multiple high density oligonucleotide arrays, it is important to remove sources of variation between arrays of non-biological origin. Normalization is a process for reducing this variation. It is common to see non-linear relations between arrays and the standard normalization provided by Affymetrix does not perform well in these situations.\nRESULTS: We present three methods of performing normalization at the probe intensity level. These methods are called complete data methods because they make use of data from all arrays in an experiment to form the normalizing relation. These algorithms are compared to two methods that make use of a baseline array: a one number scaling based algorithm and a method that uses a non-linear normalizing relation by comparing the variability and bias of an expression measure. Two publicly available datasets are used to carry out the comparisons. The simplest and quickest complete data method is found to perform favorably.\nAVAILABILITY: Software implementing all three of the complete data normalization methods is available as part of the R package Affy, which is a part of the Bioconductor project http://www.bioconductor.org.\nSUPPLEMENTARY INFORMATION: Additional figures may be found at http://www.stat.berkeley.edu/~bolstad/normalize/index.html",
+		"container-title": "Bioinformatics (Oxford, England)",
+		"DOI": "10.1093/bioinformatics/19.2.185",
+		"ISSN": "1367-4803",
+		"issue": "2",
+		"journalAbbreviation": "Bioinformatics",
+		"language": "eng",
+		"note": "PMID: 12538238",
+		"page": "185-193",
+		"source": "PubMed",
+		"title": "A comparison of normalization methods for high density oligonucleotide array data based on variance and bias",
+		"volume": "19",
+		"author": [
+			{
+				"family": "Bolstad",
+				"given": "B. M."
+			},
+			{
+				"family": "Irizarry",
+				"given": "R. A."
+			},
+			{
+				"family": "Astrand",
+				"given": "M."
+			},
+			{
+				"family": "Speed",
+				"given": "T. P."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2003",
+					1,
+					22
 				]
 			]
 		}

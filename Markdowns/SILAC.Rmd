@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   html_document:
     code_folding: show
+    toc: true
   pdf_document: default
 bibliography: bib.json
 ---
@@ -88,7 +89,8 @@ print(colnames(infdata))
 > 2. What columns contain the abundances for the the Light and Heavy-labelled samples?
 > 3. How do the Light and Heavy samples relatea to the conditions (UV crosslinking +/-)?
 
-### Solution
+> ### Solution
+
 ```{r class.source = 'fold-hide'}
 # 1. Protein.Accessions are all the proteins a sequence can match to.
 # Master.Protein.Accessions are the master protein(s) that a peptide is deemed 
@@ -197,10 +199,12 @@ abundance_data_complete <- do.call('rbind', annot_pep_data_parsed) %>%
 
 ### Calculate ratios
 
-> Exercise 2
+> #### Exercise 2
+> 
 > Add a new column to `abundance_data_complete` which gives the CL/NC ratio
 
-### Solution
+> #### Solution
+
 ```{r class.source = 'fold-hide', eval=FALSE}
 abundance_data_complete %>% mutate(ratio=CL/NC)
 ```
@@ -234,14 +238,15 @@ missing_tallies %>%
 ```
 
 
-> ### Exercise 3
+> #### Exercise 3
 >
 > Modify the code above so that rather than showing one bar each for every
 > level of missing status, it shows a stacked bar for each replicate, where the fill
 > denotes the missing status (see below for how it should look)
 
 
-### Solution
+> #### Solution
+
 ```{r class.source = 'fold-hide', fig.height=3, fig.width=6}
 missing_tallies <- ratios %>%
   group_by(Replicate, missing) %>%
@@ -504,16 +509,19 @@ Below, we print the object to see a summary.
 print(pep_res)
 ```
 
-> Exercise 4
+> #### Exercise 4
+> 
 > 1. How many peptides are there?
 > 2. How many feature columns are there?
 
-### Solution
-```{r class.source = 'fold-hide', echo=FALSE, eval=FALSE}
+> ### Solution
 
+```{r class.source = 'fold-hide', eval=FALSE}
 nrow(pep_res) #1
 length(fvarLabels(pep_res)) #2
+
 ```
+
 
 Note that there is also a section call 'Processing information'. This will retain
 information about any processing we perform on our data.

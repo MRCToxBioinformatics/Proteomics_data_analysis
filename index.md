@@ -66,25 +66,18 @@ the data we will use.
 ## Course materials
 
 The fist part of the course is broken into sections for different 'flavours' of quantitative
-bottom-up proteomics by Mass-spectrometry. Each section contains a notebook
-covering data processing and QC which starts from the Proteome Discoverer (PD)
+bottom-up proteomics by Mass-spectrometry. Each section contains a subsection covering:
+
+- Data processing and QC which starts from the Proteome Discoverer (PD)
 output files and performs filtering, quality control and data processing to
-obtain the desired quantification data from which one can perform further
-visualisation or statistical testing. Additional notebooks are included to cover
-further topics for each flavour.
+obtain the quantification data
+- Statistical testing for differential abundance
 
-The second part of the course materials contains
-
-
-### 1. Processing and QC for quantitative MS
-
-#### Tandem-Mass Tags (TMT)
-
-- [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html)
+Additional subsections are included to cover further topics for each flavour.
 
 
 
-#### Label-Free Quantification (LFQ)
+### 1. Label-Free Quantification (LFQ)
 
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html)
 
@@ -94,17 +87,21 @@ The second part of the course materials contains
 
 
 
-#### Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)
+### 2. Tandem-Mass Tags (TMT)
+
+- [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html)
+
+
+
+### 3. Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)
 
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html)
+
+- [Statistical testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/Stats_diff_abundance_SILAC.html)
 
 - [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
 
 
-### 2. Statistical testing and visualisation of quantitative MS
-
-
-- [Statistical testing - differential abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/Stats_diff_abundance.html)
 
 
 

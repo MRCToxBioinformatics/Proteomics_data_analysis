@@ -6,6 +6,7 @@ date: "`r Sys.Date()`"
 output:
   html_document:
     code_folding: show
+    toc: true
   pdf_document: default
 bibliography: bib.json
 ---
@@ -19,9 +20,20 @@ knitr::opts_chunk$set(
 
 ## Preamble
 
-Label-Free Quantification (LFQ) is the simplest form of quantitative proteomics, in which different samples are quantified in separate MS runs. Since each sample is run separately, different peptides will be quantified in each sample and the peptide intensities may not be directly comparable between samples. LFQ also typically suffers from a higher burden of missing values. One solution to this is so-called 'match-between-runs' [@http://zotero.org/users/5634351/items/87YIDK69], or the functionally equivalent 'Minora' algorithm employed by PD. These algorithms use the observed retention times of MS1 ions which were successfully spectrum matched to identify the likely peptide sequence of MS1 ions that could not be spectrum matched. 
+Label-Free Quantification (LFQ) is the simplest form of quantitative proteomics, 
+in which different samples are quantified in separate MS runs.
 
-Despite the pitfalls of LFQ, the data analysis is still is relatively straightforward, though there are steps that need some careful consideration and quality control assessment.
+Since each sample is run separately, different peptides will be quantified in each 
+sample and the peptide intensities may not be directly comparable between samples.
+LFQ also typically suffers from a higher burden of missing values. One solution 
+to this is so-called 'match-between-runs' 
+[@http://zotero.org/users/5634351/items/87YIDK69], or the functionally equivalent 
+'Minora' algorithm employed by PD. These algorithms use the observed retention 
+times of MS1 ions which were successfully spectrum matched to identify the likely 
+peptide sequence of MS1 ions that could not be spectrum matched. 
+
+Despite the pitfalls of LFQ, the data analysis is still is relatively straightforward, 
+though there are steps that need some careful consideration and quality control assessment.
 
 ### Load dependencies
 
@@ -40,7 +52,9 @@ library(tidyr)
 
 ## Input data
 
-We start with the peptide-level output from Proteome Discoverer (PD). This experiment was designed to identify RNA-binding proteins (RBP) in the U-2 OS cell line using the OOPS method [@http://zotero.org/users/5634351/items/EJHWF46N] with a comparison of RNase +/- used to separate RBPs from background non-specific proteins. 4 replicate experiments were performed, where the RNase +/- experiments were performed from the same OOPS interface. For each LFQ run, approximately the same quantity of peptides were injected, based on quantification of peptide concentration post trypsin digestion. This data is not published but the aim of the experiment is equivalent to Figure 2e in the original OOPS paper[@http://zotero.org/users/5634351/items/EJHWF46N].  
+We start with the peptide-level output from Proteome Discoverer (PD). I would always recommend staring from peptide-level PD output for LFQ data, as this will allow you to perform QC at the peptide-level and then summarise to protein-level abundance in a more appropriate manner than PD does by default, which is to simply sum all PSMs passing filters.
+
+The data we are using are from an experiment designed to identify RNA-binding proteins (RBP) in the U-2 OS cell line using the OOPS method [@http://zotero.org/users/5634351/items/EJHWF46N] with a comparison of RNase +/- used to separate RBPs from background non-specific proteins. 4 replicate experiments were performed, with the RNase +/- experiments performed from the same OOPS interface. For each LFQ run, approximately the same quantity of peptides were injected, based on quantification of peptide concentration post trypsin digestion. This data has not published but the aim of the experiment is equivalent to Figure 2e in the original OOPS paper [@http://zotero.org/users/5634351/items/EJHWF46N].  
 
 The data we will use is available through the `Proteomics.analysis.data` package.
 ```{r}
@@ -49,7 +63,7 @@ pep_data <- read.delim(
               package = "Proteomics.analysis.data"))
 ```
 
-We can explore the structure of the input data using `str`. We see that we have a `data.frame()` with `r nrow(pep_data)` rows and `r ncol(pep_data)` columns. The most important columns to us are:
+We can explore the structure of the input data using `str`. We see that we have a `data.frame` with `r nrow(pep_data)` rows and `r ncol(pep_data)` columns. The most important columns to us are:
 
 - **Sequence**: The sequence of the peptide
 - **Modifications**: The detected peptide modifications, including variable, e.g induced modifications such as oxidation
@@ -60,7 +74,7 @@ We can explore the structure of the input data using `str`. We see that we have 
 str(pep_data)
 ```
 
-> ### Discussion
+> ### Discussion (1)
 >
 > Examine the column names and answer the following:
 >
@@ -68,7 +82,15 @@ str(pep_data)
 > to the conditions (RNase +/-)?
 
 
-The InputFiles.txt file from PD can be used to determine the relationship between the Abundance.F*.Sample columns and the samples. If in any doubt, you can also check with the Proteomics service.
+```{r class.source = 'fold-hide', eval=FALSE}
+# It's not possible to tell!
+```
+
+
+---
+
+
+The `InputFiles.txt` file from PD can be used to determine the relationship between the Abundance.F*.Sample columns and the samples. If in any doubt, you can also check with the Proteomics service.
 
 The accompanying `LFQ_OOPS_RNase_InputFiles.txt` file is available through the `Proteomics.analysis.data` package.
 ```{r}
@@ -80,7 +102,8 @@ print(inputfiles %>% filter(Study.File.ID!=''))
 
 Here, we see that F17-20 are 'R_neg', e.g RNase - and F21-24 are 'R_positive', e.g RNase +.
 
-We could parse the InputFiles.txt file to generate the sample information, but for this experiment, it's small enough that it can be easily generated manually.
+We could parse the `InputFiles.txt` file to generate the sample information, but 
+for this experiment, it's small enough that it can be easily generated manually.
 ```{r}
 sample_data <- data.frame(
   File = paste0("F", 17:24),
@@ -170,7 +193,7 @@ pep <- MSnbase::MSnSet(exprs = exprs_data,
 
 First of all, we want to inspect the peptide intensity distributions. 
 
-> ### Exercise
+> ### Exercise 1
 > Plot the distributions of intensities for each sample. What do you conclude?
 >
 > Hints:
@@ -179,7 +202,7 @@ First of all, we want to inspect the peptide intensity distributions.
 > - You will need to log-transform the abundances to make them interpretable
 
 
-### Solution
+>### Solution
 ```{r class.source = 'fold-hide', eval=FALSE}
 log(pep, base=2) %>% exprs() %>% boxplot()
 ```
@@ -229,7 +252,8 @@ print(p)
 > calling `is.na(exprs(obj))`
 
 
-### Solution
+> ### Solution
+
 ```{r class.source = 'fold-hide'}
 
 sum(is.na(pep)) #1
@@ -265,7 +289,24 @@ RNase negative replicate 4 had slightly lower overall peptide intensities and ap
 
 ## Normalise peptide intensities
 
-We have injected the same quantity of peptides for each sample, so it's reasonable to normalise the samples against one another. Here we will apply 'center-median' normalisation, which in `MSnbase::normalise` is called `diff.median`. Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
+We don't have an internal benchmark proteins we can normalise against, so we will only be able to assess protein abundances relative to the total amount of protein present in each sample. We intended to inject the same quantity of peptides for each sample so your intuition could be that there should be no reason to normalise the resultant signal and to do so risks removing true biological variance. 
+
+> ### Discussion (2)
+>
+> What technical explanations can you think of which would explain the differences in intensity?
+
+```{r class.source = 'fold-hide', eval=FALSE}
+# 1. Incorrect total peptide quantification leading to under/over-injection of peptides
+# 2. Differences between separate MS runs (especially when lots of samples are being processed)
+```
+
+---
+
+Since the technical explanations are compelling and we can only assess relative quantification here, it's reasonable to normalise the samples against one another. 
+
+Here we will apply 'center-median' normalisation, which in `MSnbase::normalise` is called `diff.median`. Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
+
+Center-median normalisation is a relatively naive form of normalisation, which is most likely to be appropriate when the samples being compared are similar to one another. Arguably, in this case our samples are more distinct since we are comparing OOPS samples +/- RNase and we should at least explore using a more sophisticated normalisation such as Variance Stabilising Normalisation (VSN). For a more complete discussion of proteomics normalisation, see [@http://zotero.org/users/5634351/items/ZG3ASMKX]. However, bear in mind that this paper is applying the normalisations to the protein-level abundances.
 
 ```{r, fig.height=3, fig.width=5, fig.fullwidth=TRUE, fig.cap="Protein intensities post-normalisation"}
 pep_norm <- pep %>% 
@@ -366,10 +407,11 @@ saveRDS(pep_restricted, 'results/lfq_pep_restricted.rds')
 ```
 
 
-## Session info {.unnumbered}
+## References {.unlisted .unnumbered}
+
+
+## Session info {.unlisted .unnumbered}
 
 ```{r sessionInfo, echo=FALSE}
 sessionInfo()
 ```
-
-## References {.unnumbered}

@@ -16,7 +16,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Remotes: 
     CambridgeCentreForProteomics/camprotR,
-    mrctoxbioinformatics/Proteomics.analysis.data
+    mrctoxbioinformatics/Proteomics.analysis.data,
+    csdaw/uniprotREST
 biocViews:
 Imports: 
     biobroom,
@@ -34,7 +35,8 @@ Imports:
     gplots,
     iq,
     Proteomics.analysis.data,
-    broom
+    broom,
+    uniprotREST
 Depends: 
     R (>= 2.10)
 URL: https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/

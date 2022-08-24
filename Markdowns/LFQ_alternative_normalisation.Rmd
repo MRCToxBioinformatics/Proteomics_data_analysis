@@ -35,6 +35,7 @@ library(camprotR)
 library(Proteomics.analysis.data)
 library(dplyr)
 library(tidyr)
+library(uniprotREST)
 
 ```
 
@@ -61,29 +62,27 @@ Next, we need annotations regarding which proteins are glycoproteins and GO-anno
 
 Here, we query UniProt programmatically to obtain the GO terms and features for our proteins, which we will further parse to determine the GO-RBPs and glycoproteins.
 
-You can skip over the details of this section as the important point is just that we have obtained the required glycoprotein and RNA-binding annotations.
-
 ```{r}
-up_url <- "https://www.uniprot.org/uploadlists/"
 
-request <- list(
-  query = paste(rownames(prot_robust), collapse = " "),
-  from = "ACC+ID",
-  to = "ACC",
-  format = "tab",
-  columns = paste("id", "features", "go-id", sep = ",")
-)
+glyco_res <-  uniprot_map(
+  ids = rownames(prot_robust)[1:10],
+  from = "UniProtKB_AC-ID",
+  to = "UniProtKB",
+  fields = "ft_carbohyd",
+) %>% rename(c('UNIPROTKB'='From'))
 
-response <- httr::GET(url = up_url, query = request)
+go_res <-  uniprot_map(
+  ids = rownames(prot_robust)[1:10],
+  from = "UniProtKB_AC-ID",
+  to = "UniProtKB",
+  fields = "go",
+) %>% rename(c('UNIPROTKB'='From'))
 
-res <- httr::content(response, type = "text", encoding = "UTF8") %>% 
-  read.table(text = ., sep = "\t", header = TRUE) %>% 
-  select(Entry, Features, Gene.ontology.IDs)
 ```
 
-Get the GO-RBPs
-
+Get the GO-RBPs. Note that we are also identifying proteins annotated with offsprings of the RNA-binding GO term, since some proteins will only be annnotated with the child terms.
 ```{r}
+
 # GO term for RNA-binding
 go_rbp <- "GO:0003723"
 
@@ -91,31 +90,36 @@ go_rbp <- "GO:0003723"
 go_rbp_offspring <- AnnotationDbi::get("GO:0003723", GO.db::GOMFOFFSPRING)
 
 # Identify all GO-RBPs
-rbps<- res %>%
-  separate_rows(Gene.ontology.IDs, sep='; ') %>%
-  filter(Gene.ontology.IDs %in% c(go_rbp, go_rbp_offspring)) %>% 
-  pull(Entry) %>%
+rbps <- go_res %>%
+  separate_rows(Gene.Ontology..GO., sep='; ') %>%
+  mutate(go=gsub('.*\\[(\\S+)\\]', '\\1', Gene.Ontology..GO.)) %>%
+  filter(go %in% c(go_rbp, go_rbp_offspring)) %>% 
+  pull(UNIPROTKB) %>%
   unique()
 ```
 
-Get the glycoproteins
-
+Get the glycoproteins. Note that we are only keeping proteins with at least 3 glycosylated sites to ensure we have confidence in their glycosylation
 ```{r}
-glycoproteins <- res %>% 
-  filter(grepl("Glycosylation", Features)) %>%
-  mutate(Glyco.features = Features) %>%
-  separate_rows(Glyco.features, sep = "; ") %>%
-  filter(grepl("Glycosylation", Glyco.features)) %>%
-  mutate(Glyco.features = gsub("\\(|\\)", "", Glyco.features)) %>%
-  separate(Glyco.features, into = c(NA, "Glycosylation.count"), sep = " ") %>%
-  select(Entry, Glycosylation.count)
+glycoproteins <- glyco_res %>% 
+  # remove proteins with empty glycoprotein annotation
+  filter(Glycosylation!='') %>%
+  # separate the glycoprotein annotation into constituent parts
+  separate_rows(Glycosylation, sep = "; ") %>%
+  # keep the annotations relating to glycosylated position
+  filter(grepl("CARBOHYD", Glycosylation)) %>%
+  # count the number of glycosylated sites per protein
+  group_by(UNIPROTKB) %>%  tally() %>%
+  # keep proteins with 3 or more glycosylations
+  filter(n>=3) %>%
+  pull(UNIPROTKB)
+  
 ```
 
 Add feature columns describing the glycoprotein and GO-RBP status of the proteins.
 
 ```{r}
 fData(prot_ratios) <- fData(prot_ratios) %>%
-  mutate(Glycoprotein = rownames(prot_ratios) %in% glycoproteins$Entry) %>%
+  mutate(Glycoprotein = rownames(prot_ratios) %in% glycoproteins) %>%
   mutate(GO.RBP = rownames(prot_ratios) %in% rbps) %>%
   mutate(Glyco.RBP = interaction(Glycoprotein, GO.RBP)) %>%
   mutate(Glyco.RBP = factor(recode(
@@ -192,6 +196,11 @@ And plot the protein ratios post-normalisation.
 plot_ratios(prot_ratios_norm)
 
 ```
+
+```{r, eval=FALSE}
+saveRDS(prot_ratios_norm, './results/lfq_prot_robust_glyco_norm.rds')
+```
+
 
 Now, the median log2 RNase -/+ ratio for glycoproteins is zero for all replicates and we have far fewer GO-annotated RBPs with negative log RNase -/+ ratios.
 
