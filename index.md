@@ -56,7 +56,7 @@ introduction to the principles of bottom-up proteomics by Mass-Spectrometry.
 To ensure all the neccessary R packages are installed for you to run the code,
 you can install the `Protoemics.data.analysis` package like so:
 ``` r
-remotes::install_github("MRCToxBioinformatics/Proteomics_data_analysis/", dependencies='Suggests')
+remotes::install_github("MRCToxBioinformatics/Proteomics_data_analysis", dependencies='Suggests')
 ```
 This will also install the `Proteomics.analysis.data` package which contains
 the data we will use.
