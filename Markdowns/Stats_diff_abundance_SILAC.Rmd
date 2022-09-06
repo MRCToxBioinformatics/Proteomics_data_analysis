@@ -1,5 +1,5 @@
 ---
-title: "Differential abundance testing for quantitative MS"
+title: "Differential abundance testing for SILAC proteomics"
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:

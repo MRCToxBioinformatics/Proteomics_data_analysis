@@ -65,7 +65,7 @@ knitr::kable(data.frame('Replicate'=1:4, 'Heavy'=c('CL', 'CL', 'NC', 'NC'), 'Lig
 ```
 
 
-Below, we define the filepaths for the 'PeptideGroup.txt' files we will use. These are part the `Proteomics.analysis.data` package. As such, their complete filepath can be identified using `system.file`.
+Below, we define the filepaths for the 'PeptideGroups.txt' files we will use. These are part the `Proteomics.analysis.data` package. As such, their complete filepath can be identified using `system.file`.
 ```{r}
 replicates <- 1:4
 pep_infiles <- file.path('OOPS_SILAC', paste0('OOPS_', replicates, '_PeptideGroups.txt'))
@@ -85,7 +85,7 @@ print(colnames(infdata))
 >
 > Examine the column names and answer the following:
 >
-> 1. What's do you the difference is between "Protein.Accessions" and "Master.Protein.Accessions"?
+> 1. What do you the difference is between "Protein.Accessions" and "Master.Protein.Accessions"?
 > 2. What columns contain the abundances for the the Light and Heavy-labelled samples?
 > 3. How do the Light and Heavy samples relatea to the conditions (UV crosslinking +/-)?
 
@@ -167,7 +167,7 @@ annotate_parsed_data <- function(rep_n){
   
   pep_data <- pep_data %>%
     # Add new columns with CL or NC intensities 
-    mutate('CL' = !!sym(cl_col), # !!sym(var) allows us to supply a string var for tidy evalulation
+    mutate('CL' = !!sym(cl_col), # !!sym(var) allows us to supply a string var for tidy evaluation
            'NC' = !!sym(nc_col),
            Replicate = rep_n) %>%
     # And subset to these columns
@@ -428,9 +428,9 @@ In this vignette example, we will proceed with all the peptides, but retain info
 
 Now, we want to make an `MSnSet` from the peptide-level CL/NC ratios. For this, we need to generate a matrix of quantification values (CL/NC ratios), where rows are features (peptides), and a separate data.frame with information about the features, e.g master protein assignment. See the `vignette("msnset", package="camprotR")` for more details about MSnSets.
 
-Since each of the SILAC samples was processed separately, the assignments of peptides -> master proteins may not be consistent. This will cause issues when we try and create the `MSnSet` and we therefore need to update the master protein column. 
+For this experiment, each of the SILAC samples was processed separately. This is sometimes more suitable than processing all samples together when we don't want PD to share information between samples and attempt to find peptides that we missed in one sample but spectrum matched in another. However, this also means the assignments of peptides -> master proteins will not be 100% consistent across samples, since this assignment depends on the total set of observed peptides. This will cause issues when we try and create the `MSnSet` since one peptide could be assigned to different proteins across the samples and we therefore need to update the master protein column. 
 
-`camprotR::get_parsimony_pep2prot()` will take a list of files, each with Sequence, Protein.Acession and Master.Protein.Accession columns and generate a unified peptide sequence to master protein assignment. This is done by an approximately parsimonous approach, which is not identical to PD. The function therefore also summarises the difference between the PD assignments and the updated assignment, which is normally very little.
+`camprotR::get_parsimony_pep2prot()` will take a list of files, each with Sequence, Protein.Accessions and Master.Protein.Accessions columns and generate a unified peptide sequence to master protein assignment. This is done by an approximately parsimonious approach, which is not identical to PD. The function therefore also summarises the difference between the PD assignments and the updated assignment. This is presented in two tables with the number and percentage of peptides with single or multiple master proteins in the input data (`Original`) and the updated peptide to protein assignments (`Updated`). Finally, a plot is shown with the number of peptide sequences per protein using the original and updated assignments. Typically, the differences between the original PD assignments and the updated assignments is small.
 
 > **Note**
 > If all your SILAC samples were processed in one single PD workflow, e.g you have just one file for all samples,
@@ -487,7 +487,7 @@ feat_data <- flt_ratios_wide %>%
 ```
 
 We then create an `MSnSet`. Note that here, we do not provide any experimental
-condition to the `MSnSet` contrustuctor, so 'pData' returns a data.frame with no columns 
+condition to the `MSnSet` constructor, so 'pData' returns a data.frame with no columns 
 ```{r}
 # Create MSnSet
 pep_res <- MSnSet(exprs = exprs_data,
@@ -533,7 +533,7 @@ print(pep_res)
 
 Then we summarise the peptide-level ratios to protein-level ratios. Here, we'll use the median.
 Note the message about missing values. We're given the option `na.rm=TRUE`, which will be passed onto
-`medium()` to ensure missing values are handled appropriately, e.g `medium(x, y, NA)`
+`median()` to ensure missing values are handled appropriately, e.g `median(x, y, NA)`
 will return the equivalent to `medium(x, y)`.
 
 ```{r, fig.height=4, fig.width=4}
