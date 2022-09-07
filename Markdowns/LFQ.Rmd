@@ -20,26 +20,25 @@ knitr::opts_chunk$set(
 
 ## Preamble
 
-Label-Free Quantification (LFQ) is the simplest form of quantitative proteomics, 
+Label-Free Quantification (LFQ) is the simplest form of quantitative proteomics,
 in which different samples are quantified in separate MS runs.
 
-Since each sample is run separately, different peptides will be quantified in each 
+Since each sample is run separately, different peptides will be quantified in each
 sample and the peptide intensities may not be directly comparable between samples.
-LFQ also typically suffers from a higher burden of missing values. One solution 
-to this is so-called 'match-between-runs' 
-[@http://zotero.org/users/5634351/items/87YIDK69], or the functionally equivalent 
-'Minora' algorithm employed by PD. These algorithms use the observed retention 
-times of MS1 ions which were successfully spectrum matched to identify the likely 
-peptide sequence of MS1 ions that could not be spectrum matched. 
+One solution to the higher burden of missing values is 'match-between-runs'
+[@http://zotero.org/users/5634351/items/87YIDK69], or the functionally equivalent
+'Minora' algorithm employed by Proteome Discoverer (PD). These algorithms use the observed retention
+times of MS1 ions which were successfully spectrum matched in one sample to identify the likely
+peptide sequence of MS1 ions that could not be spectrum matched in another sample.
 
-Despite the pitfalls of LFQ, the data analysis is still is relatively straightforward, 
+Despite the pitfalls of LFQ, the data analysis is still relatively straightforward,
 though there are steps that need some careful consideration and quality control assessment.
 
-### Load dependencies
+
+#### Load dependencies
 
 Load the required libraries.
 ```{r setup, message=FALSE, warning=FALSE}
-
 library(ggplot2)
 library(MSnbase)
 library(biobroom)
@@ -52,9 +51,9 @@ library(tidyr)
 
 ## Input data
 
-We start with the peptide-level output from Proteome Discoverer (PD). I would always recommend staring from peptide-level PD output for LFQ data, as this will allow you to perform QC at the peptide-level and then summarise to protein-level abundance in a more appropriate manner than PD does by default, which is to simply sum all PSMs passing filters.
+We start with the peptide-level output from PD. We recommend staring from peptide-level PD output for LFQ data, as this will allow you to perform QC at the peptide-level and then summarise to protein-level abundance in a more appropriate manner than PD does by default, which is to simply sum all PSMs passing filters.
 
-The data we are using are from an experiment designed to identify RNA-binding proteins (RBP) in the U-2 OS cell line using the OOPS method [@http://zotero.org/users/5634351/items/EJHWF46N] with a comparison of RNase +/- used to separate RBPs from background non-specific proteins. 4 replicate experiments were performed, with the RNase +/- experiments performed from the same OOPS interface. For each LFQ run, approximately the same quantity of peptides were injected, based on quantification of peptide concentration post trypsin digestion. This data has not published but the aim of the experiment is equivalent to Figure 2e in the original OOPS paper [@http://zotero.org/users/5634351/items/EJHWF46N].  
+The data we are using are from an experiment designed to identify RNA-binding proteins (RBPs) in the U-2 OS cell line using the OOPS method [@http://zotero.org/users/5634351/items/EJHWF46N]. A comparison of RNase +/- is used to separate RBPs from background non-specific proteins. Four replicate experiments were performed, with the RNase +/- experiments performed from the same OOPS interface. For each LFQ run, approximately the same quantity of peptides were injected, based on quantification of peptide concentration post trypsin digestion. This data has not published but the aim of the experiment is equivalent to Figure 2e in the original OOPS paper.  
 
 The data we will use is available through the `Proteomics.analysis.data` package.
 ```{r}
@@ -90,9 +89,9 @@ str(pep_data)
 ---
 
 
-The `InputFiles.txt` file from PD can be used to determine the relationship between the Abundance.F*.Sample columns and the samples. If in any doubt, you can also check with the Proteomics service.
+The `InputFiles.txt` file from PD can be used to determine the relationship between the Abundance.F*.Sample columns and the samples. If you are in any doubt, you can also check with the Proteomics Facility.
 
-The accompanying `LFQ_OOPS_RNase_InputFiles.txt` file is available through the `Proteomics.analysis.data` package.
+The accompanying `LFQ_OOPS_RNase_InputFiles.txt` file is also available through the `Proteomics.analysis.data` package.
 ```{r}
 inputfiles <- read.delim(
   system.file("extdata", 'OOPS_RNase_LFQ', 'LFQ_OOPS_RNase_InputFiles.txt',
@@ -102,7 +101,7 @@ print(inputfiles %>% filter(Study.File.ID!=''))
 
 Here, we see that F17-20 are 'R_neg', e.g RNase - and F21-24 are 'R_positive', e.g RNase +.
 
-We could parse the `InputFiles.txt` file to generate the sample information, but 
+We could parse the `InputFiles.txt` file to generate the sample information, but
 for this experiment, it's small enough that it can be easily generated manually.
 ```{r}
 sample_data <- data.frame(
@@ -120,14 +119,17 @@ knitr::kable(sample_data,
 ```
 
 
-### Parse PeptideGroups.txt file
-To simply the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. This function will read in the data and remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the [cRAP database](https://www.thegpm.org/crap/) and provided to PD. We need to obtain their accessions and provide these to `camprotR::parse_features`. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+---
 
-The file we will use, `cRAP_20190401.fasta.gz`, is available through the `Proteomics.analysis.data` package. 
+
+### Parse PeptideGroups.txt file
+To simplify the process of reading in the data and performing initial filtering, we will use `camprotR::parse_features`. This function will read in the data and remove contaminant proteins and features without quantification data. Contaminant proteins were defined using the [cRAP database](https://www.thegpm.org/crap/) and provided to PD. We need to obtain their accessions and provide these to `camprotR::parse_features`. Below, we parse the cRAP FASTA to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+
+The file we will use, `cRAP_20190401.fasta.gz`, is again available through the `Proteomics.analysis.data` package.
 ```{r}
 
 crap_fasta_inf <- system.file(
-  "extdata", "cRAP_20190401.fasta.gz", 
+  "extdata", "cRAP_20190401.fasta.gz",
   package = "Proteomics.analysis.data"
 )
 
@@ -135,13 +137,13 @@ crap_fasta_inf <- system.file(
 crap_fasta <- Biostrings::fasta.index(crap_fasta_inf, seqtype = "AA")
 
 # Extract the UniProt accessions associated with each cRAP protein
-crap_accessions <- crap_fasta %>% 
-  pull(desc) %>% 
-  stringr::str_extract_all(pattern="(?<=\\|).*?(?=\\|)") %>% 
+crap_accessions <- crap_fasta %>%
+  pull(desc) %>%
+  stringr::str_extract_all(pattern="(?<=\\|).*?(?=\\|)") %>%
   unlist()
 ```
 
-We can then supply these cRAP protein IDs to `camprotR::parse_features()` which will remove features (i.e. peptides in this case) which may originate from contaminants, as well as features which don't have a unique master protein. 
+We can then supply these cRAP protein IDs to `camprotR::parse_features()` which will remove features (i.e. peptides in this case) which may originate from contaminants, as well as features which don't have a unique master protein.
 
 See `?parse_features` for further details, including the removal of 'associated cRAP' for conservative contaminants removal.
 
@@ -149,11 +151,13 @@ See `?parse_features` for further details, including the removal of 'associated 
 pep_data_flt <- camprotR::parse_features(
   pep_data,
   level = 'peptide',
-  crap_proteins = crap_accessions, 
+  crap_proteins = crap_accessions,
 )
 ```
 
 From the above, we can see that we have started with `r nrow(pep_data)` 'features' (peptides) from `r length(unique(pep_data$Master.Protein.Accessions))` master proteins across all samples. After removal of contaminants and peptides that can't be assigned to a unique master protein, we have `r nrow(pep_data_flt)` peptides remaining from `r length(unique(pep_data_flt$Master.Protein.Accessions))` master proteins.
+
+---
 
 ## Convert to MSnSet
 We now store the filtered peptide data in an MSnSet, the standard data object for proteomics in R.
@@ -168,18 +172,18 @@ See the `vignette("msnset", package="camprotR")` for more details.
 ```{r}
 # Create expression matrix with peptide abundances (exprs) and
 # human readable column names
-exprs_data <- pep_data_flt %>% 
-  select(matches("Abundance")) %>% 
-  setNames(sample_data$Sample) %>% 
+exprs_data <- pep_data_flt %>%
+  select(matches("Abundance")) %>%
+  setNames(sample_data$Sample) %>%
   as.matrix()
 
 # Create data.frame with sample metadata (pData)
-pheno_data <- sample_data %>% 
-  select(-File) %>% 
+pheno_data <- sample_data %>%
+  select(-File) %>%
   tibble::column_to_rownames(var = "Sample")
 
 # Create data.frame with peptide metadata (fData)
-feature_data <- pep_data_flt %>% 
+feature_data <- pep_data_flt %>%
   select(-matches("Abundance"))
 
 # Create MSnSet
@@ -189,9 +193,12 @@ pep <- MSnbase::MSnSet(exprs = exprs_data,
 ```
 
 
+---
+
+
 ## QC peptides
 
-First of all, we want to inspect the peptide intensity distributions. 
+First of all, we want to inspect the peptide intensity distributions.
 
 > ### Exercise 1
 > Plot the distributions of intensities for each sample. What do you conclude?
@@ -207,6 +214,8 @@ First of all, we want to inspect the peptide intensity distributions.
 log(pep, base=2) %>% exprs() %>% boxplot()
 ```
 
+---
+
 The above code give us a crude representation. We could make this prettier, but `camprotR` already has a function to explore the quantification distributions, `plot_quant`, which we can use instead. Below, we plot boxplots and density plot to inspect the abundance distributions.  
 
 ```{r, fig.height=3, fig.width=4, fig.fullwidth=TRUE, fig.cap="Peptide intensities"}
@@ -221,9 +230,14 @@ pep %>%
 
 We expect these to be approximately equal and any very low intensity sample would be a concern that would need to be further explored. Here, we can see that there is some clear variability, but no sample with very low intensity.
 
+---
+
 ## Missing values
 
-Next, we consider the missing values. Note that `MSnbase::plotNA` assumes the object contains protein-level data and names the x-axis accordingly. Here, we update the plot aesthetics and rename the x-axis
+Next, we consider the missing values, using `MSnbase::plotNA` to give us a quick graphical overview. This function shows the number of features with each level of data completeness ('Individual features') and the overall proportion of missing values in the dataset (Full dataset). The number of features with an acceptable level of missingness (specified by `pNA`) is also highlighted on the plot.
+
+Note that `MSnbase::plotNA` assumes the object contains protein-level data and names the x-axis accordingly. Here, we update the plot aesthetics and rename the x-axis.
+
 
 ```{r, fig.show='hide'}
 p <- MSnbase::plotNA(pep, pNA = 0) +
@@ -240,7 +254,7 @@ print(p)
 
 > ### Exercise 2
 >
-> We have used `MSnbase::plotNA` to assess the missing values but it's 
+> We have used `MSnbase::plotNA` to assess the missing values but it's
 > straightforward to do this ourselves directly from the `prot_res` object.
 >
 > 1. How many values are missing in total?
@@ -248,7 +262,7 @@ print(p)
 > 3. How many missing values are there in each sample?
 > 4. How many peptides have no missing values?
 >
-> Hint: You can use `is.na` directly on the `MSnSet` and it is equivalent to 
+> Hint: You can use `is.na` directly on the `MSnSet` and it is equivalent to
 > calling `is.na(exprs(obj))`
 
 
@@ -258,14 +272,18 @@ print(p)
 
 sum(is.na(pep)) #1
 mean(is.na(pep)) #2
-colSums(is.na(pep)) #3 
+colSums(is.na(pep)) #3
 sum(rowSums(is.na(pep))==0) #4
 ```
+
+
+---
+
 
 So, from the `r nrow(pep)` peptides, just `r sum(rowSums(is.na(pep))==0)` have quantification values in all 8 samples. This is not a surprise for LFQ, since each sample is prepared and run separately.
 
 
-We can also explore the structure of the missing values further using an 'upset' plot. 
+We can also explore the structure of the missing values further using an 'upset' plot.
 Here, we use the `naniar` package for this.
 
 ```{r, fig.height=5, fig.width=8, fig.fullwidth=TRUE, fig.cap="Missing values upset plot"}
@@ -287,9 +305,13 @@ So in this case, we can see that the most common missing value patterns are:
 
 RNase negative replicate 4 had slightly lower overall peptide intensities and appears to be somewhat of an outlier. In this case, we will retain the sample but in other cases, this may warrant further exploration and potentially removal of a sample.
 
+
+---
+
+
 ## Normalise peptide intensities
 
-We don't have an internal benchmark proteins we can normalise against, so we will only be able to assess protein abundances relative to the total amount of protein present in each sample. We intended to inject the same quantity of peptides for each sample so your intuition could be that there should be no reason to normalise the resultant signal and to do so risks removing true biological variance. 
+We don't have internal benchmark proteins we can normalise against, so we will only be able to assess protein abundances relative to the protein present in each sample. Since we injected the same quantity of peptides for each sample, your intuition may be that there should be no reason to normalise and to do so risks removing true biological variance.
 
 > ### Discussion (2)
 >
@@ -302,18 +324,18 @@ We don't have an internal benchmark proteins we can normalise against, so we wil
 
 ---
 
-Since the technical explanations are compelling and we can only assess relative quantification here, it's reasonable to normalise the samples against one another. 
+The technical explanations are compelling. Futhermore, we can only assess relative quantification since we have unknown losses of material in the sample processing. Thus, it's reasonable to normalise the abundances.
 
-Here we will apply 'center-median' normalisation, which in `MSnbase::normalise` is called `diff.median`. Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
+Here we will apply median normalisation such that all column (sample) medians match the grand median. In `MSnbase::normalise`, this is called `diff.median`. Since the peptide intensities are log-Gaussian distributed, we log~2~-transform them before performing the normalisation.
 
-Center-median normalisation is a relatively naive form of normalisation, which is most likely to be appropriate when the samples being compared are similar to one another. Arguably, in this case our samples are more distinct since we are comparing OOPS samples +/- RNase and we should at least explore using a more sophisticated normalisation such as Variance Stabilising Normalisation (VSN). For a more complete discussion of proteomics normalisation, see [@http://zotero.org/users/5634351/items/ZG3ASMKX]. However, bear in mind that this paper is applying the normalisations to the protein-level abundances.
+Median normalisation is a relatively naive form of normalisation, since we are only applying a transformation using a single correction factor for each sample. This is most likely to be appropriate when the samples being compared are similar to one another. Arguably, in this case our samples are more distinct since we are comparing OOPS samples +/- RNase and we could at least explore using a more sophisticated normalisation such as Variance Stabilising Normalisation (VSN). For a more complete discussion of proteomics normalisation, see [@http://zotero.org/users/5634351/items/ZG3ASMKX]. However, bear in mind that this paper is applying the normalisations to the protein-level abundances.
 
 ```{r, fig.height=3, fig.width=5, fig.fullwidth=TRUE, fig.cap="Protein intensities post-normalisation"}
-pep_norm <- pep %>% 
-  log(base = 2) %>% 
+pep_norm <- pep %>%
+  log(base = 2) %>%
   MSnbase::normalise('diff.median')  
 
-pep_norm %>% 
+pep_norm %>%
   camprotR::plot_quant(method = 'density')
 ```
 
@@ -324,15 +346,15 @@ Before we can summarise to protein-level abundances, we need to exclude peptides
 ```{r}
 pep_restricted <- pep_norm %>%
   # Maximum 4/8 missing values
-  MSnbase::filterNA(pNA = 4/8) %>% 
-  
+  MSnbase::filterNA(pNA = 4/8) %>%
+
   # At least two peptides per protein
-  camprotR::restrict_features_per_protein(min_features = 3, plot = FALSE) %>% 
-  
+  camprotR::restrict_features_per_protein(min_features = 3, plot = FALSE) %>%
+
   # Repeat the filtering since restrict_features_per_protein will replace some values with NA
-  MSnbase::filterNA(pNA = 4/8) %>% 
-  
-  camprotR::restrict_features_per_protein(min_features = 3, plot = FALSE) 
+  MSnbase::filterNA(pNA = 4/8) %>%
+
+  camprotR::restrict_features_per_protein(min_features = 3, plot = FALSE)
 ```
 
 We can then re-inspect the missing values. Note that we have reduced the overall number of peptides to `r nrow(pep_restricted)`.
@@ -348,6 +370,9 @@ p <- MSnbase::plotNA(pep_restricted, pNA = 0) +
 print(p)
 ```
 
+---
+
+
 ## Summarising to protein-level abundances
 
 We can now summarise to protein-level abundance. Below, we use 'robust' summarisation [@http://zotero.org/users/5634351/items/FZN3QTTZ] with `MSnbase::combineFeatures()`. This returns a warning about missing values that we can ignore here since the robust method is inherently designed to handle missing values. See `MsCoreUtils::robustSummary()` and [this publication](https://pubmed.ncbi.nlm.nih.gov/32321741/) for further details about the robust method.
@@ -356,10 +381,10 @@ We can now summarise to protein-level abundance. Below, we use 'robust' summaris
 prot_robust <- pep_restricted %>%
   MSnbase::combineFeatures(
     # group the peptides by their master protein id
-    groupBy = fData(pep_restricted)$Master.Protein.Accessions, 
-    method = 'robust', 
+    groupBy = fData(pep_restricted)$Master.Protein.Accessions,
+    method = 'robust',
     maxit = 1000  # Ensures convergence for MASS::rlm
-  ) 
+  )
 ```
 
 We can then re-inspect the missing values at the protein level. So, we have quantification for `r nrow(prot_robust)` proteins, of which `r nrow(filterNA(prot_robust, pNA = 0))` are fully quantified across all 8 samples. The most common missing values pattern remains missing in just RNase negative replicate 4.
@@ -381,9 +406,7 @@ naniar::gg_miss_upset(data.frame(exprs(prot_robust)),
                       nsets = 10)
 ```
 
-We have now obtained protein-level abundances from our LFQ data. This is our
-recommended procedure for summarising from peptide to protein level abundances.
-
+---
 
 We have now processed our peptide-level LFQ abundances and obtained protein-level
 abundances, from which we can perform our downstream analyses.
@@ -394,6 +417,12 @@ back into memory in downstream analyses. We use `saveRDS` to save them in compre
 saveRDS(prot_robust, 'results/lfq_prot_robust.rds')
 ```
 
+---
+
+
+### Optional extra sections on normalisation and summarisation
+
+
 For a comparison between `robust` and `maxLFQ` for summarisation to protein-level
 abundances, see the notebook
 [Alternatives for summarising to protein-level abundance - MaxLFQ](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
@@ -401,16 +430,17 @@ abundances, see the notebook
 For a demonstration of an alternative normalisation approach where one has a strong prior belief, see
 [Normalisation to a prior expectation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_alternative_normalisation.html)
 
-We will also save the `pep_restricted` object, since this is used in the [notebook comparing robust to maxLFQ summarisation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
+We will also save the `pep_restricted` object, since this is used in [Alternatives for summarising to protein-level abundance - MaxLFQ](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
 ```{r, eval=FALSE}
 saveRDS(pep_restricted, 'results/lfq_pep_restricted.rds')
 ```
-
-## References {.unlisted .unnumbered}
-
 
 ## Session info {.unlisted .unnumbered}
 
 ```{r sessionInfo, echo=FALSE}
 sessionInfo()
 ```
+
+---
+
+## References {.unlisted .unnumbered}
