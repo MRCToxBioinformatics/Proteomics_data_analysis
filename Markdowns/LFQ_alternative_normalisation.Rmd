@@ -80,7 +80,7 @@ go_res <-  uniprot_map(
 
 ```
 
-Get the GO-RBPs. Note that we are also identifying proteins annotated with offsprings of the RNA-binding GO term, since some proteins will only be annnotated with the child terms.
+Get the GO-RBPs. Note that we are also identifying proteins annotated with offsprings of the RNA-binding GO term, since some proteins will only be annnotated with the child term.
 ```{r}
 
 # GO term for RNA-binding
