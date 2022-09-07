@@ -110,6 +110,9 @@ lfq_protein_tidy <- lfq_protein %>%
 
 ```
 
+
+As an example of how to run a single t-test, let's subset to a single protein.
+First, we extract the quantification values for this single protein
 ```{r}
 example_protein <- 'A5YKK6'
 
@@ -117,38 +120,45 @@ lfq_protein_tidy_example <- lfq_protein_tidy %>% filter(protein==example_protein
 
 print(lfq_protein_tidy_example)
 ```
+Then we use `t.test` to perform the t-test. We are giving two
+vectors of values and the switch `paired=TRUE` so that a paired two sample t-test is performed.
 
 ```{r}
-lfq.t.test.example <- t.test(
+t.test.example <- t.test(
   lfq_protein_tidy_example$pos,
   lfq_protein_tidy_example$neg,
   alternative='two.sided',
   var.equal=FALSE,
   paired=TRUE)
 
-print(lfq.t.test.example)
+print(t.test.example)
 
 
 ```
-
-
+We can use `tidy` from the `broom` package to return the t-test results in
+a tidy tibble. The value of this will be seen in the next code chunk.
 ```{r}
-lfq.t.test.all <- lfq_protein_tidy %>%
+broom::tidy(t.test.example)
+```
+
+We can now apply a t-test to every protein using dplyr `group` and `do`, making use of `tidy`.
+```{r}
+t.test.all <- lfq_protein_tidy %>%
   group_by(protein) %>%
   do(tidy(t.test(.$pos, .$neg, paired=TRUE, alternative='two.sided')))
 ```
 
 Here are the results for the t-test for the example protein. As we can see, the 'estimate' column in `t.text.res.all` is the mean log2 ratio. The 'statistic' column is the t-statistic and the 'parameter' column is the degrees of freedom for the t-statistic. All the values are identical since have performed the exact same test with both approaches.
 ```{r}
-print(lfq.t.test.example)
-lfq.t.test.all %>% filter(protein==example_protein)
+print(t.test.example)
+t.test.all %>% filter(protein==example_protein)
 
 ```
 When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
 
 There is a clear peak for very low p-values (<0.05) and an approximately uniform distribution across the rest of the p-value range, which is what we want.
 ```{r}
-hist(lfq.t.test.all$p.value)
+hist(t.test.all$p.value)
 ```
 Since we have performed multiple tests, we want to calculate an adjusted p-value
 to avoid type I errors (false positives).
@@ -158,12 +168,12 @@ False Discovery Rate, e.g the proportion of false positives among the rejected n
 
 
 ```{r}
-lfq.t.test.all$padj <- p.adjust(lfq.t.test.all$p.value, method='BH')
+t.test.all$padj <- p.adjust(t.test.all$p.value, method='BH')
 ```
 
 At an FDR of 1%, we have `r sum(lfq.t.test.all$padj<0.1)` proteins with a significant difference.
 ```{r}
-sum(lfq.t.test.all$padj<0.01)
+sum(t.test.all$padj<0.01)
 ```
 
 #### Moderated t-test (limma)
@@ -228,14 +238,15 @@ limma::plotSA(limma_fit)
 
 
 Despite the lack of a strong relationship between protein abundance and variance, 
-we will continue with limma regardless. In this case, the variances will be shrunk 
-towards a similar value, regardless of the mean protein abundance.
+we will continue with limma regardless, since it will still increase the effective 
+degrees of freedom with which the gene-wise variances are estimated. In this case, 
+the variances will be shrunk towards a similar value, regardless of the mean protein abundance.
 
 We can extract a results table like so
 ```{r}
 
 # use colnames(limma_fit$coefficients) to identify the coefficient names
-lfq.limma_results <- topTable(limma_fit, n=Inf, coef='conditionRNase_pos')
+limma_results <- topTable(limma_fit, n=Inf, coef='conditionRNase_pos')
 ```
 
 
@@ -243,26 +254,40 @@ Below, we summarise the number of proteins with statistically different abundanc
 in CL vs NC and plot a 'volcano' plot to visualise this. 
 ```{r}
 
-table(lfq.limma_results$adj.P.Val<0.01)
+table(limma_results$adj.P.Val<0.01)
 
 
 limma_results %>%
   ggplot(aes(x = logFC, y = -log10(adj.P.Val), colour = adj.P.Val < 0.01)) +
   geom_point() +
   theme_camprot(border=FALSE, base_size=15) +
-  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'CL vs NC Sig.') +
+  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'RNase +/- Sig.') +
   labs(x = 'RNase +/- (Log2)', y = '-log10(p-value)')
+```
+> ### Discussion
+>
+> 1. Given the experimental design, would you expect proteins to have signficant 
+> changes in both directions? 
+> 2. How would you interpret the fold changes identified with respect to the 
+> absolute protein abundances?
+> 3. Does your answer to question 2 affect your expectation in question 1?
+
+> Solution
+
+```{r class.source = 'fold-hide'}
+# 1. We are starting from a single OOPS interface and adding +/- RNase, then recollecting the interface. RBPs should be depleted, but there is no way for any protein to be enriched by this process. Thus, we wouldn't expect proteins with a positive RNase +/- ratio!
+# 2. The protein abundances are relative to the total amount of protein in each sample. Thus, the fold changes are relative to the overall fold-change in the amount of protein in each sample. For example, if there is a global loss of protein in RNase + samples, a positive RNase +/- ratio only represents a increase relative to the global loss, and could be a negative RNase +/- ratio in absolute terms!
+# 3. We are seeing positive RNase +/- ratios because there is a global difference in the amount of protein and we are using a relative protein abundance quantification approach.
+
 ```
 
 
-
-We can now compare the results from the t-test and the moderate t-test (limma).
+We can now compare the results from the t-test and the moderated t-test (limma).
 Below, we update the column names so it's easier to see which column comes from which test and then merge the two test results.
 ```{r}
 lfq_compare_tests <- merge(
-  setNames(lfq.limma_results, paste0('limma.', colnames(limma_results))),
-  setNames(lfq.t.test.all, paste0('t.test.', colnames(lfq.t.test.all))),
-  lfq.t.test.all,
+  setNames(limma_results, paste0('limma.', colnames(limma_results))),
+  setNames(t.test.all, paste0('t.test.', colnames(t.test.all))),
   by.x='row.names',
   by.y='t.test.protein')
 
@@ -321,7 +346,7 @@ lfq_compare_tests %>%
 #### Moderated t-test (DEqMS)
 
 limma assumes there is a relationship between protein abundance and variance. This is usually 
-the case, although we have seen above that this isn't so with our datat For LFQ 
+the case, although we have seen above that this isn't so with our data. For LFQ,
 the relationship between variance and the number of peptides may be stronger.
 
 DEqMS [@http://zotero.org/users/5634351/items/RTM6NFVU], is an alternative to limma, 
@@ -374,7 +399,7 @@ Below, we inspect the peptide count vs variance relationship which `DEqMS` is
 using in the statistical test.
 
 In this case the relationship between peptide count and variance is not clear at all.
-We press on regardless, though, as with the limma analysis, the variance will be shrunk towards a global mean rather than one informed by the number of peptides
+We press on regardless.As with the limma analysis, the variance will be shrunk towards a global mean rather than one informed by the number of peptides
 
 ```{r, fig.height=5, fig.width=5}
 # Diagnostic plots
@@ -398,17 +423,12 @@ lfq.deqms_results %>%
   ggplot(aes(x = logFC, y = -log10(sca.P.Value), colour = sca.adj.pval < 0.01)) +
   geom_point() +
   theme_camprot(border=FALSE, base_size=15) +
-  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'CL vs NC Sig.') +
+  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'RNase +/- Sig.') +
   labs(x = 'RNase +/- (Log2)', y = '-log10(p-value)')
 
 
 ```
-We can compare the results of limma and DEqMS by considering the number of 
-```{r}
-lfq.deqms_results %>%
-  group_by(limma_sig=adj.P.Val<0.01, DEqMS_sig=sca.adj.pval<0.01) %>%
-  tally()
-```
+We can compare the results of limma and DEqMS by considering the p-values. Note that here, they are very well correlated. This is because the methods failed to identify a strong trend between the mean abundance (limma) or number of peptides (DEqMS) and the variance. Thus, both shrunk the variance towards a global mean and similarly increased the effective degrees of freedom.
 
 ```{r}
 
@@ -423,55 +443,5 @@ lfq.deqms_results %>%
   scale_y_log10()
 ```
 
-Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columnts are from `limma`. The columns prefixed with `sca` are the from `DEqMS`. 
-
-
-> ### Extended Exercise (Optional)
-> Compare the number of significant differences (at 1% FDR) for each method,
-> grouping by the number of peptides per protein. An example of how to visualise 
-> this is below, though you do not need to replicate this visualisation precisely!
-> 
-> How do you interpet this?
->
-> Hints:
->
-> - For the number of peptides, you want the deqms.count column. You need
->   to bin this into reasonable bins. See e.g ?Hmisc::cut2 for this.
-
-
-### Solution
-```{r class.source = 'fold-hide', eval=FALSE}
-
-# Start by tallying as in code chunk above
-silac_compare_tests %>%
-  group_by('min_peptides'=Hmisc::cut2(deqms.count, cuts=c(1:4,10)),
-           't-test'=t.test.padj<0.01,
-           'deqms'=deqms.sca.adj.pval<0.01) %>%
-  tally() %>%
-  
-  # make a single column describing yes/no significant with each method and 
-  # rename to make it more intuitive
-  mutate(compare_tests=recode(interaction(`t-test`, deqms), 
-                              'FALSE.FALSE'='Neither',
-                              'TRUE.TRUE'='Both',
-                              'TRUE.FALSE'='t-test',
-                              'FALSE.TRUE'='DEqMS')) %>%
-  mutate(compare_tests=factor(compare_tests, levels=c('t-test', 'DEqMS', 'Both', 'Neither'))) %>%
-  
-  ggplot(aes(min_peptides, n, fill=compare_tests)) +
-  geom_bar(stat='identity',position='fill') +
-  geom_text(position=position_fill(vjust=0.5), aes(label=n)) +
-  theme_camprot(border=FALSE, base_size=15) +
-  scale_fill_manual(values=c(get_cat_palette(3), 'grey'), name='') +
-  labs(x='Minimum peptides per sample', y='Fraction of proteins')
-
-# Note that the 3 proteins which are only significant with the t-test have a
-# minimum of 1/2 peptides per sample. These are likely to be poorly quantified
-# and falsely identified as CL-enriched.
-```
-
-
-
-
-
+Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columns are from `limma`. The columns prefixed with `sca` are the from `DEqMS`.
 

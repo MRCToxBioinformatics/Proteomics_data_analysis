@@ -42,11 +42,12 @@ false positives and increases statistical power.
 
 - **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]: limma assumes there is a relationship between protein abundance and
 variance. This is usually the case, although for SILAC
+
   - The relationship with variance is often stronger with the number of peptides
   - The quantification value is the ratio, not protein abundance and there is no
   reason to believe there will be a relationship between the mean ratio and variance
   
-  As such, `DEqMS` should be preferred over limma.
+As such, `DEqMS` should be preferred over limma.
 
 Here, we will perform statistical analyses on SILAC data.
 
@@ -96,7 +97,7 @@ We will use two approaches:
 - moderated one sample t-test (DEqMS)
 
 ### T-test 
-To perform a t-test for each protein, we want to extract the quantification values in a long 'tidy' format. We can do this using the biobroom package
+To perform a t-test for each protein, we want to extract the quantification values in a long 'tidy' format. We can do this using the `biobroom` package
 ```{r}
 silac_protein_tidy <- silac_protein %>%
   biobroom::tidy.MSnSet() %>%
@@ -135,13 +136,12 @@ tidy(t.test.res)
 ```
 
 We can now apply a t-test to every protein using dplyr `group` and `do`, making use of `tidy`.
-
-
 ```{r}
 t.test.res.all <- silac_protein_tidy %>%
   group_by(protein) %>%
   do(tidy(t.test(.$value, alternative='two.sided')))
 ```
+
 
 Here are the results for the t-test for the example protein. As we can see, the 'estimate' column in `t.text.res.all` is the mean log2 ratio. The 'statistic' column is the t-statistic and the 'parameter' column is the degrees of freedom for the t-statistic. All the values are identical since have performed the exact same test with both approaches.
 ```{r}
@@ -149,9 +149,10 @@ print(t.test.res)
 t.test.res.all %>% filter(protein==example_protein)
 
 ```
+
 When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
 
-Here, we have so many significant tests that the uniform distribution is hard to assess. Note that, beyond the clear peak for very low p-values (<0.05) we also have a slight skew towards low p-values in the range 0.05-0.15. This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.  
+Here, we have so many significant tests that the uniform distribution is hard to assess. Excluding the clear peak for very low p-values (<0.05), we also have a slight skew towards low p-values in the range 0.05-0.15. This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.  
 ```{r}
 hist(t.test.res.all$p.value, 20)
 ```
@@ -262,6 +263,8 @@ deqms_results %>%
   scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'CL vs NC Sig.') +
   labs(x = 'CL vs NC (Log2)', y = '-log10(p-value)')
 ```
+
+
 Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columns are from `limma`. The columns prefixed with `sca` are the from `DEqMS`. 
 
 ```{r}
@@ -304,6 +307,8 @@ ggplot(silac_compare_tests) +
   geom_abline(slope=1) +
   theme_camprot(border=FALSE) +
   labs(x='t.test mean ratio', y='DEqMS mean ratio')
+
+# The ratios are the same. DEqMS (and limma) are moderating the test statistics, but not the estimated fold-change.
 ```
 
 We can also compare the p-values from the two tests. Note that the p-value is almost
@@ -347,7 +352,7 @@ silac_compare_tests %>%
 
 
 > Solution
-```{r class.source = 'fold-hide', eval=FALSE}
+```{r class.source = 'fold-hide'}
 
 # Start by tallying as in code chunk above
 silac_compare_tests %>%

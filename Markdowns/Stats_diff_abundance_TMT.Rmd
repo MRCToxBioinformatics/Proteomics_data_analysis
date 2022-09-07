@@ -1,0 +1,186 @@
+---
+title: "Differential abundance testing for quantitative MS"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    toc: true
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+```
+
+
+There are a number of statistical tests/R packages one can use to perform differential abundance testing for proteomics data. The list below is by no means complete:
+
+- **t-test**: If we assume that the quantification values are Gaussian
+distributed, a t-test may be appropriate. For TMT, log-transformed abundances can 
+be assumed to be Gaussian distributed. When we have one condition variable and we 
+are comparing between two values variable in a TMT experiment (e.g samples are 
+treatment or control), a two-sample t-test is appropriate. 
+
+- **ANOVA/linear model**: Where a more complex experimental design is involved,
+an ANOVA or linear model can be used, on the same assumptions at the t-test.
+
+- **`limma`** [@http://zotero.org/users/5634351/items/6KTXTWME]:
+Proteomics experiments are typically lowly replicated (e.g n << 10).
+Variance estimates are therefore inaccurate. `limma`  is an R package that extends
+the t-test/ANOVA/linear model testing framework to enable sharing of information
+across features (here, proteins) to update the variance estimates. This decreases
+false positives and increases statistical power.
+
+- **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]: 
+limma assumes there is a relationship between protein abundance and
+variance. This is usually the case, although the relationship with variance is 
+usually stronger with the number of peptide spectrum matches (for TMT experiments),
+  
+  As such, `DEqMS` should be generally preferred over limma for TMT proteomics.
+
+Here, we will perform statistical analyses on TMT proteomics data.
+
+
+These are examples only and the code herein is unlikely to be directly applicable
+to your own dataset.
+
+---
+
+### Load dependencies
+
+Load the required libraries.
+
+```{r, message=FALSE, warning=FALSE}
+library(camprotR)
+library(ggplot2)
+library(MSnbase)
+library(DEqMS)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(broom)
+library(biobroom)
+
+```
+
+## Input data
+
+Here, we will start with the TMT data processed in [DQC PSM-level quantification and summarisation to protein-level abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html).
+Please see the previous notebook for details of the experimental design and aim and data processing. 
+
+As a reminder, this data comes from a published benchmark experiment where yeast peptides were spiked into human peptides at 3 known amounts to provide ground truth fold changes (see below). Two versions of Orbitrap control software were tested, with v3 shown to improve fold-change estimation for low intensity peptides. Here, we will use the data obtained with v3. For more details, see: [@http://zotero.org/users/5634351/items/LG3W8G4T]
+
+<img src="https://github.com/CambridgeCentreForProteomics/notch/blob/master/images/toc.png?raw=true" width="70%"/>
+
+
+
+First, we read in the protein-level quantification data.
+```{r}
+tmt_protein <- readRDS('./results/tmt_protein.rds')
+```
+
+To keep things simple, we will just focus on the comparison between the 2x and 6x yeast spike-in samples (the last 6 TMT tags).
+
+```{r}
+tmt_protein <- tmt_protein[,1:7]
+print(pData(tmt_protein))
+```
+
+---
+
+## Testing for differential abundance
+
+We will use two approaches to identify proteins with significant differences in abundance:
+- two-sample t-test
+- moderated two-sample t-test (limma)
+- moderated two-sample t-test (DEqMS)
+
+### T-test 
+To perform a t-test for each protein, we want to extract the quantification values in a long 'tidy' format. We can do this using the biobroom package
+
+
+```{r}
+tmt_protein_tidy <- tmt_protein %>%
+  biobroom::tidy.MSnSet(addPheno=TRUE) %>% # addPheno=TRUE adds the pData so we have the sample information too
+  filter(is.finite(value))
+```
+
+As an example of how to run a single t-test, let's subset to a single protein.
+First, we extract the quantification values for this single protein
+```{r}
+
+example_protein <- 'P40414'
+
+tmt_protein_tidy_example <- tmt_protein_tidy %>%
+  filter(protein==example_protein) %>%
+  select(-sample) 
+
+print(tmt_protein_tidy_example)
+```
+Then we use `t.test` to perform the t-test. 
+
+```{r}
+
+t.test.res <- t.test(formula=value~spike,
+                     data=tmt_protein_tidy_example,
+                     alternative='two.sided')
+
+print(t.test.res)
+
+
+```
+We can use `tidy` from the `broom` package to return the t-test results in
+a tidy tibble. The value of this will be seen in the next code chunk.
+
+```{r}
+tidy(t.test.res)
+```
+
+We can now apply a t-test to every protein using dplyr `group` and `do`, making use of `tidy`.
+
+
+```{r}
+t.test.res.all <- tmt_protein_tidy %>%
+  group_by(protein) %>%
+  do(tidy(t.test(formula=value~spike,
+                 data=.,
+                 alternative='two.sided')))
+```
+
+Here are the results for the t-test for the example protein. As we can see, the 'estimate' column in `t.text.res.all` is the mean protein abundance. The 'statistic' column is the t-statistic and the 'parameter' column is the degrees of freedom for the t-statistic. All the values are identical since have performed the exact same test with both approaches.
+```{r}
+print(t.test.res)
+t.test.res.all %>% filter(protein==example_protein)
+
+```
+
+When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
+
+Here, we have so many significant tests that the uniform distribution is hard to assess. Note that, beyond the clear peak for very low p-values (<0.05) we also have a slight skew towards low p-values in the range 0.05-0.2. This may indicate insufficient statistical power to detect some proteins that are truly differentially abundant.  
+```{r}
+hist(t.test.res.all$p.value, 20)
+```
+
+Since we have performed multiple tests, we want to calculate an adjusted p-value
+to avoid type I errors (false positives).
+
+Here, are using the Benjamini, Y., and Hochberg, Y. (1995) method to estimate the
+False Discovery Rate, e.g the proportion of false positives among the rejected null hypotheses.
+
+
+```{r}
+? p.adjust
+t.test.res.all$padj <- p.adjust(t.test.res.all$p.value, method='BH')
+table(t.test.res.all$padj<0.01)
+```
+
+At an FDR of 1%, we have `r sum(t.test.res.all$padj<0.01)` proteins with a significant difference.
+
+FROM HERE, ADD LIMMA AND DEQMS
