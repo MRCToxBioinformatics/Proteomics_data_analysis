@@ -164,7 +164,6 @@ False Discovery Rate, e.g the proportion of false positives among the rejected n
 
 
 ```{r}
-? p.adjust
 t.test.res.all$padj <- p.adjust(t.test.res.all$p.value, method='BH')
 table(t.test.res.all$padj<0.01)
 ```

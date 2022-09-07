@@ -319,7 +319,7 @@ pep_norm %>%
 
 ## Summarising to protein-level abundance
 
-Before we can summarise to protein-level abundances, we need to exclude peptides with too many missing values. Here, peptides with more than 4/8 missing values are discarded, using `MSnbase::filterNA()`. We also need to remove proteins without at least two peptides. We will use `camprotR::restrict_features_per_protein()` which will replace quantification values with `NA` if the sample does not have two quantified peptides for a given protein. Note that this means we have to repeat the filtering process since we are adding missing values.
+Before we can summarise to protein-level abundances, we need to exclude peptides with too many missing values. Here, peptides with more than 4/8 missing values are discarded, using `MSnbase::filterNA()`. We also need to remove proteins without at least three peptides. We will use `camprotR::restrict_features_per_protein()` which will replace quantification values with `NA` if the sample does not have two quantified peptides for a given protein. Note that this means we have to repeat the filtering process since we are adding missing values.
 
 ```{r}
 pep_restricted <- pep_norm %>%
@@ -327,12 +327,12 @@ pep_restricted <- pep_norm %>%
   MSnbase::filterNA(pNA = 4/8) %>% 
   
   # At least two peptides per protein
-  camprotR::restrict_features_per_protein(min_features = 2, plot = FALSE) %>% 
+  camprotR::restrict_features_per_protein(min_features = 3, plot = FALSE) %>% 
   
   # Repeat the filtering since restrict_features_per_protein will replace some values with NA
   MSnbase::filterNA(pNA = 4/8) %>% 
   
-  camprotR::restrict_features_per_protein(min_features = 2, plot = FALSE) 
+  camprotR::restrict_features_per_protein(min_features = 3, plot = FALSE) 
 ```
 
 We can then re-inspect the missing values. Note that we have reduced the overall number of peptides to `r nrow(pep_restricted)`.
@@ -405,7 +405,6 @@ We will also save the `pep_restricted` object, since this is used in the [notebo
 ```{r, eval=FALSE}
 saveRDS(pep_restricted, 'results/lfq_pep_restricted.rds')
 ```
-
 
 ## References {.unlisted .unnumbered}
 
