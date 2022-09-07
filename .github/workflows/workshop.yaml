@@ -10,5 +10,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }} # Github Token
         with:
-          branch: 'release'
+          branch: 'workshop'
           sha: '${{ github.event.pull_request.head.sha }}'
