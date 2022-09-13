@@ -1,5 +1,5 @@
 ---
-title: "Differential abundance testing for quantitative MS"
+title: "Differential abundance testing for TMT proteomics"
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:
@@ -40,11 +40,9 @@ false positives and increases statistical power.
 - **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]: 
 limma assumes there is a relationship between protein abundance and
 variance. This is usually the case, although the relationship with variance is 
-usually stronger with the number of peptide spectrum matches (for TMT experiments),
+sometimes stronger with the number of peptide spectrum matches (for TMT experiments),
   
-  As such, `DEqMS` should be generally preferred over limma for TMT proteomics.
-
-Here, we will perform statistical analyses on TMT proteomics data.
+re, we will perform statistical analyses on TMT proteomics data.
 
 
 These are examples only and the code herein is unlikely to be directly applicable
@@ -67,6 +65,7 @@ library(tidyr)
 library(ggplot2)
 library(broom)
 library(biobroom)
+library(uniprotREST)
 
 ```
 
@@ -75,10 +74,9 @@ library(biobroom)
 Here, we will start with the TMT data processed in [DQC PSM-level quantification and summarisation to protein-level abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html).
 Please see the previous notebook for details of the experimental design and aim and data processing. 
 
-As a reminder, this data comes from a published benchmark experiment where yeast peptides were spiked into human peptides at 3 known amounts to provide ground truth fold changes (see below). Two versions of Orbitrap control software were tested, with v3 shown to improve fold-change estimation for low intensity peptides. Here, we will use the data obtained with v3. For more details, see: [@http://zotero.org/users/5634351/items/LG3W8G4T]
+As a reminder, this data comes from a published benchmark experiment where yeast peptides were spiked into human peptides at 3 known amounts to provide ground truth fold changes (see below). For more details, see: [@http://zotero.org/users/5634351/items/LG3W8G4T]
 
 <img src="https://github.com/CambridgeCentreForProteomics/notch/blob/master/images/toc.png?raw=true" width="70%"/>
-
 
 
 First, we read in the protein-level quantification data.
@@ -90,7 +88,9 @@ To keep things simple, we will just focus on the comparison between the 2x and 6
 
 ```{r}
 tmt_protein <- tmt_protein[,1:7]
-print(pData(tmt_protein))
+
+ # this is need to make sure the spike factor doesn't contain unused levels (x6)
+pData(tmt_protein)$spike <- droplevels(pData(tmt_protein)$spike)
 ```
 
 ---
@@ -158,7 +158,6 @@ Here are the results for the t-test for the example protein. As we can see, the 
 ```{r}
 print(t.test.res)
 t.test.res.all %>% filter(protein==example_protein)
-
 ```
 
 When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
@@ -167,6 +166,23 @@ Here, we have so many significant tests that the uniform distribution is hard to
 ```{r}
 hist(t.test.res.all$p.value, 20)
 ```
+
+> ### Discussion
+>
+> What would you conclude from the p-value distribution above?
+>
+
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
+# Here, we have so many significant tests that the uniform distribution is hard to assess!
+# Note that, beyond the clear peak for very low p-values (<0.05), we also have a
+# slight skew towards low p-values in the range 0.05-0.2.
+# This may indicate insufficient statistical power to detect some proteins that 
+# are truly differentially abundant.
+```
+
+
 
 Since we have performed multiple tests, we want to calculate an adjusted p-value
 to avoid type I errors (false positives).
@@ -183,4 +199,312 @@ table(t.test.res.all$padj<0.01)
 
 At an FDR of 1%, we have `r sum(t.test.res.all$padj<0.01)` proteins with a significant difference.
 
-FROM HERE, ADD LIMMA AND DEQMS
+WORK FROM HERE!
+
+### Moderated t-test (limma)
+
+Proteomics experiments are typically lowly replicated (e.g n << 10).
+Variance estimates are therefore inaccurate. `limma` [@http://zotero.org/users/5634351/items/6KTXTWME] is an R package that extends
+the t-test/ANOVA/linear model testing framework to enable sharing of information
+across features (here, proteins) to update the variance estimates. This decreases
+false positives and increases statistical power.
+
+
+
+
+Next, we create the `MArrayLM` object and a design model. We then supply these to
+`limma::lmFit` to fit the linear model according to the design and then use
+`limma::eBayes` to compute moderated test statistics.
+```{r}
+
+exprs_for_limma <- exprs(tmt_protein)
+
+# Performing the equivalent of a two-sample t-test
+spike <- pData(tmt_protein)$spike 
+
+limma_design <- model.matrix(formula(~spike))
+
+limma_fit <- lmFit(exprs_for_limma, limma_design)
+limma_fit <- eBayes(limma_fit, trend=TRUE)
+
+```
+
+We can visualise the relationship between the average abundance and the variance using the `limma::plotSA` function.
+```{r}
+limma::plotSA(limma_fit)
+```
+
+
+> ### Discussion
+> 
+> How would you interpret the plot above?
+>
+
+> Solution
+
+```{r class.source = 'fold-hide'}
+# There's a really clear relationship between protein abundance and variance!
+
+```
+
+In this case, the variances will be shrunk towards a value that depends on the 
+mean protein abundance vs variance trend
+
+We can extract a results table like so.
+```{r}
+
+# use colnames(limma_fit$coefficients) to identify the coefficient names
+limma_results <- topTable(limma_fit, n=Inf, coef='spikex2')
+```
+
+
+Below, we summarise the number of proteins with statistically different abundance
+in 2x vs 1x and plot a 'volcano' plot to visualise this.
+```{r}
+
+table(limma_results$adj.P.Val<0.01)
+
+
+limma_results %>%
+  ggplot(aes(x = logFC, y = -log10(adj.P.Val), colour = adj.P.Val < 0.01)) +
+  geom_point(size=0.5) +
+  theme_camprot(border=FALSE, base_size=15) +
+  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = '2x vs 1x Sig.') +
+  labs(x = '2x vs 1x (Log2)', y = '-log10(p-value)')
+```
+```{r}
+t.test.res.all %>% filter(protein==example_protein)
+limma_results[example_protein,]
+```
+
+
+> ### Discussion
+>
+> Given the experimental design, would you expect proteins to have signficant
+> changes in both directions?
+
+> Solution
+
+```{r class.source = 'fold-hide'}
+# Yes! We are mixing known quantities of human and yeast proteins together such
+# that yeast proteins increase 2-fold in abundance between 2x and 1x samples, and human
+# proteins decrease in abundance (to balance out the total amount of protein in the samples)
+
+```
+
+It would make more sense to split the volcano plot by the species from which the protein derived. 
+We can obtain this information from uniprot like so.
+```{r}
+species <-  uniprot_map(
+  ids = rownames(tmt_protein),
+  from = "UniProtKB_AC-ID",
+  to = "UniProtKB",
+  fields = "organism_name",
+) %>% rename(c('UNIPROTKB'='From'))
+```
+
+> ### Exercise 1
+> Merge the `species` and `limma_results` `data.frames` and re-plot the volcano
+> plot, with one panel for each species. An example of the desired output is shown below
+>
+> Hint: see `?facet_wrap`
+
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE}
+
+limma_results %>%
+  merge(species, by.x='row.names', by.y='UNIPROTKB') %>%
+  ggplot(aes(x = logFC, y = -log10(adj.P.Val), colour = adj.P.Val < 0.01)) +
+  geom_point(size=0.5) +
+  theme_camprot(border=FALSE, base_size=15) +
+  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = '2x vs 1x Sig.') +
+  labs(x = '2x vs 1x (Log2)', y = '-log10(p-value)') +
+  facet_wrap(~(gsub('\\(.*', '', Organism)))
+
+```
+
+
+We can now compare the results from the t-test and the moderated t-test (limma).
+Below, we update the column names so it's easier to see which column comes from which test and then merge the two test results.
+```{r}
+tmt_compare_tests <- merge(
+  setNames(limma_results, paste0('limma.', colnames(limma_results))),
+  setNames(t.test.res.all, paste0('t.test.', colnames(t.test.res.all))),
+  by.x='row.names',
+  by.y='t.test.protein')
+
+```
+
+> ### Exercise 2
+> Compare the effect size estimates from t-test vs the moderated t-tests.
+> Can you explain what you observe?
+>
+> Hints:
+>
+> - For the t-test, you want the 't.test.estimate' column
+> - For the moderated t-test, you can use the 'limma.logFC' column
+
+
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
+ggplot(tmt_compare_tests) +
+  aes(t.test.estimate, limma.logFC) +
+  geom_point() +
+  geom_abline(slope=-1) +
+  theme_camprot(border=FALSE) +
+  labs(x='t-test logFC', y='limma logFC')
+
+# The logFC are the same, but the comparison is being made in opposite directions. Remember that limma is not changing the underlying data,
+# just moderating the test statistics.
+```
+
+We can also compare the p-values from the two tests. Note that the p-value is almost
+always lower for the moderated t-test with `limma` than the standard t-test.
+
+```{r}
+p <- ggplot(tmt_compare_tests) +
+  aes(log10(t.test.p.value), log10(limma.P.Value)) +
+  geom_point(size=0.2, alpha=0.2) +
+  geom_abline(slope=1, linetype=2, colour=get_cat_palette(1), size=1) +
+  theme_camprot(border=FALSE) +
+  labs(x='T-test log10(p-value)', y='limma log10(p-value)')
+
+
+print(p)
+```
+
+Finally, we can compare the number of proteins with a significant difference
+(Using 1% FDR threshold) according to each test. Using the t-test, there are  `r sum(tmt_compare_tests$t.test.padj<0.01)`
+significant differences, but with limma `r sum(tmt_compare_tests$limma.P.Value<0.01)` proteins have a significant difference.
+```{r}
+tmt_compare_tests %>%
+  group_by(t.test.padj<0.01,
+           limma.P.Value<0.01) %>%
+  tally()
+
+
+```
+
+### Moderated t-test (DEqMS)
+
+limma assumes there is a relationship between protein abundance and variance. This is usually
+the case, although we have seen above that this isn't so with our data. For LFQ,
+the relationship between variance and the number of peptides may be stronger.
+
+DEqMS [@http://zotero.org/users/5634351/items/RTM6NFVU], is an alternative to limma,
+which you can think of as an extension of limma [@http://zotero.org/users/5634351/items/6KTXTWME]
+specifically for proteomics, which uses the number of peptides rather than mean
+abundance to share information between proteins.
+
+The analysis steps are taken from the
+[DEqMS vignette](https://bioconductor.org/packages/release/bioc/vignettes/DEqMS/inst/doc/DEqMS-package-vignette.html#extract-quant-data-columns-for-deqms).
+We start from the `MArrayLM` we created for `limma` analysis and then simply
+add a `$count` column to the `MArrayLM` object and use the `spectraCounteBayes`
+function to perform the Bayesian shrinkage using the count column, which describes
+the number of pepitdes per protein. This is contrast to `limma`, which uses the
+`$Amean` column, which describes the mean protein abundance.
+
+To define the `$count` column, we need to summarise the number of PSMs per protein.
+In the DEqMS paper, they suggest that the best summarisation metric to use is the
+minimum value across the samples, so our `count` column is the minimum number of
+PSMs per protein.  
+```{r}
+
+tmt_psm_res <- readRDS('./results/psm_filt.rds')
+
+# Obtain the min peptide count across the samples and determine the minimum value across
+# samples
+min_psm_count <- camprotR::count_features_per_protein(tmt_psm_res) %>%
+  merge(tmt_protein_tidy,
+        by.x=c('Master.Protein.Accessions', 'sample'),
+        by.y=c('protein', 'sample')) %>%
+  group_by(Master.Protein.Accessions) %>%
+  summarise(min_psm_count = min(n))
+
+# add the min peptide count
+limma_fit$count <- min_psm_count$min_psm_count
+```
+
+And now we run `spectraCounteBayes` from `DEqMS` to perform the statistical test.
+```{r}
+# run DEqMS
+efit_deqms <- suppressWarnings(spectraCounteBayes(limma_fit))
+```
+
+
+
+Below, we inspect the peptide count vs variance relationship which `DEqMS` is
+using in the statistical test.
+
+In this case the relationship between peptide count and variance is not clear at all.
+We press on regardless.As with the limma analysis, the variance will be shrunk towards a global mean rather than one informed by the number of peptides
+
+```{r, fig.height=5, fig.width=5}
+# Diagnostic plots
+VarianceBoxplot(efit_deqms, n = 30, xlab = "PSMs")
+```
+
+
+Below, we summarise the number of proteins with statistically different abundance
+in RNase +/- and plot a 'volcano' plot to visualise this.
+
+```{r, fig.height=6, fig.width=6}
+deqms_results <- outputResult(efit_deqms, coef_col=2)
+
+
+table(deqms_results$sca.adj.pval<0.01)
+
+
+deqms_results %>%
+  merge(species, by.x='row.names', by.y='UNIPROTKB') %>%
+  ggplot(aes(x = logFC, y = -log10(sca.P.Value), colour = sca.adj.pval < 0.01)) +
+  geom_point(size=0.5) +
+  theme_camprot(border=FALSE, base_size=15) +
+  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = '2x vs 1x Sig.') +
+  labs(x = '2x vs 1x (Log2)', y = '-log10(p-value)') +
+  facet_wrap(~(gsub('\\(.*', '', Organism)))
+
+
+```
+We can compare the results of limma and DEqMS by considering the number of significant differences. Note that the limma results are also contained with the results from DEqMS. The `$t`, `$P.Value` and `$adj.P.Val` columns are from `limma`. The columns prefixed with `sca` are the from `DEqMS`.
+
+```{r}
+deqms_results %>%
+  group_by(limma_sig=adj.P.Val<0.01,
+           DEqMS_sig=sca.adj.pval<0.01) %>%
+  tally()
+```
+We can compare the results of limma and DEqMS by considering the p-values. Note that here, they are very well correlated. This is because the methods failed to identify a strong trend between the mean abundance (limma) or number of peptides (DEqMS) and the variance. Thus, both shrunk the variance towards a global mean and similarly increased the effective degrees of freedom.
+```{r}
+
+deqms_results %>%
+  ggplot() +
+  aes(P.Value, sca.P.Value) +
+  geom_point(size=0.5, alpha=0.5) +
+  geom_abline(slope=1, colour=get_cat_palette(2)[2], size=1, linetype=2) +
+  theme_camprot(border=FALSE) +
+  labs(x='limma p-value', y='DEqMS p-value') +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+Finally, at this point we can save any one of the `data.frames` containing the statistical test results, either to a compressed format (`rds`) to read back into a later R notebook, or a flatfile  (`.tsv`) to read with e.g excel.
+```{r, eval=FALSE}
+# These lines are not run and are examples only
+
+saveRDS(deqms_results, 'filename_to_save_to.rds')
+write.csv(deqms_results, 'filename_to_save_to.tsv', sep='\t', row.names=FALSE)
+```
+
+
+## References {.unlisted .unnumbered}
+
+
+## Session info {.unlisted .unnumbered}
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
+

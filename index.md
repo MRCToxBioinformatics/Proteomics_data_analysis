@@ -93,6 +93,7 @@ Additional subsections are included to cover further topics for each flavour.
 
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html)
 
+- [Statistical testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/Stats_diff_abundance_TMT.html)
 
 
 ### 3. Stable Isotope Labelling by/with Amino acids in Cell culture (SILAC)

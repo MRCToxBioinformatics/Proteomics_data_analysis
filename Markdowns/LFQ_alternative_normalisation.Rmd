@@ -65,14 +65,14 @@ Here, we query UniProt programmatically to obtain the GO terms and features for 
 ```{r}
 
 glyco_res <-  uniprot_map(
-  ids = rownames(prot_robust)[1:10],
+  ids = rownames(prot_robust),
   from = "UniProtKB_AC-ID",
   to = "UniProtKB",
   fields = "ft_carbohyd",
 ) %>% rename(c('UNIPROTKB'='From'))
 
 go_res <-  uniprot_map(
-  ids = rownames(prot_robust)[1:10],
+  ids = rownames(prot_robust),
   from = "UniProtKB_AC-ID",
   to = "UniProtKB",
   fields = "go",

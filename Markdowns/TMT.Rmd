@@ -187,9 +187,14 @@ Now we have filtered our PSM-level quantification, summarised to protein-level a
 
 We save the object to disk so we can read it back into memory when we need it
 ```{r, eval=FALSE}
+saveRDS(psm_filt_sn_int_missing, './results/psm_filt.rds')
 saveRDS(protein_norm, './results/tmt_protein.rds')
 ```
 
+```{r}
+length(setdiff(fData(psm_filt_sn_int_missing)$Master.Protein.Accessions,
+               fData(protein_norm)$Master.Protein.Accessions))
+```
 
 To add 
 - TMM normalisation

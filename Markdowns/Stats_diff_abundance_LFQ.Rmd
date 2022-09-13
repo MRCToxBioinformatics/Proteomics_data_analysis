@@ -267,6 +267,7 @@ limma_results %>%
   scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'RNase +/- Sig.') +
   labs(x = 'RNase +/- (Log2)', y = '-log10(p-value)')
 ```
+
 > ### Discussion
 >
 > 1. Given the experimental design, would you expect proteins to have signficant
@@ -284,25 +285,6 @@ limma_results %>%
 
 ```
 
-> ### Discussion
-> How would you interpret this volcano plot. What are your conclusions about the
-> proteins with significantly positive RNase +/- ratios
-
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-# LFQ provides relative abundances for each sample. So the ratio for RNase +/- is
-# the ratio between two relative abundances. We therefore have the limit our
-# interpretion to changes in the relative abundances and can not be certain about
-# changes in absolute abundances.
-
-# However, here, the RNase +/- samples were taken from the same starting material and RNase
-# treatment can only deplete the material. Significantly higher abundance in RNase +
-# for a given protein therefore represents a relatively smaller effects of RNase +
-# compared to the overall depletion this causes for the sample as a whole.
-
-# This is an experiment where relative abundances are difficult to interpret!
-```
 
 We can now compare the results from the t-test and the moderated t-test (limma).
 Below, we update the column names so it's easier to see which column comes from which test and then merge the two test results.
@@ -335,7 +317,7 @@ ggplot(lfq_compare_tests) +
   theme_camprot(border=FALSE) +
   labs(x='t-test logFC', y='limma logFC')
 
-# The logFC at the same! Remember that limma is not changing the underlying data,
+# The logFC are the same! Remember that limma is not changing the underlying data,
 # just moderating the test statistics.
 ```
 
