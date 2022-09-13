@@ -151,10 +151,24 @@ t.test.res.all %>% filter(protein==example_protein)
 ```
 When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
 
-Here, we have so many significant tests that the uniform distribution is hard to assess. Note that, beyond the clear peak for very low p-values (<0.05) we also have a slight skew towards low p-values in the range 0.05-0.15. This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.  
+
 ```{r}
 hist(t.test.res.all$p.value, 20)
 ```
+
+> ### Discussion
+> What would you conclude from the p-value distribution above?
+>
+
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
+# Here, we have so many significant tests that the uniform distribution is hard to assess!
+# Note that, beyond the clear peak for very low p-values (<0.05), we also have a 
+# slight skew towards low p-values in the range 0.05-0.15. 
+# This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.
+```
+
 
 Since we have performed multiple tests, we want to calculate an adjusted p-value
 to avoid type I errors (false positives).
@@ -170,7 +184,34 @@ table(t.test.res.all$padj<0.01)
 
 At an FDR of 1%, we have `r sum(t.test.res.all$padj<0.01)` proteins with a significant difference.
 
+Finally, a differential abundance test wouldn't be complete without a volcano plot!
 
+Note that all proteins with a statistically significant change are increased in CL,
+so it doesn't resemble the typical volcano plot.
+```{r, fig.height=6, fig.width=6}
+
+t.test.res.all %>%
+  ggplot(aes(x = estimate, y = -log10(p.value), colour = padj < 0.01)) +
+  geom_point() +
+  theme_camprot(border=FALSE, base_size=15) +
+  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'CL vs NC Sig.') +
+  labs(x = 'CL vs NC (Log2)', y = '-log10(p-value)')
+```
+
+> ### Discussion
+> SILAC ratios are equivalent to the absolute abundance ratios between two or more samples.
+> If this experiment had been performed using LFQ or TMT, which quantify the 
+> relative abundances in each sample, how would you expect the above volcano plot
+> to look?
+
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
+# It would like be much more symetrical, since the trend towards increased abundance
+# in CL would be masked by the comparison of the relative abundances in CL and NC.
+# Protein which are highly enriched with CL would have reduced ratios and those with more slight
+# enrichments may even appear to be relatively depleted!
+```
 
 ### Moderated t-test (DEqMS)
 
@@ -248,8 +289,9 @@ VarianceBoxplot(efit_deqms, n = 30, xlab = "Peptides")
 
 
 Below, we summarise the number of proteins with statistically different abundance 
-in CL vs NC and plot a 'volcano' plot to visualise this. Note that all proteins 
-with a statistically significant change are increased in CL, so the plot looks 
+in CL vs NC and plot a 'volcano' plot to visualise this. 
+
+Here, all proteins with a statistically significant change are increased in CL, so the plot looks 
 more like a fire-hose than a volcano!
 
 ```{r, fig.height=6, fig.width=6}
@@ -262,6 +304,7 @@ deqms_results %>%
   scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = 'CL vs NC Sig.') +
   labs(x = 'CL vs NC (Log2)', y = '-log10(p-value)')
 ```
+
 Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columns are from `limma`. The columns prefixed with `sca` are the from `DEqMS`. 
 
 ```{r}
@@ -331,6 +374,17 @@ silac_compare_tests %>%
   tally()
 
 
+```
+
+Finally, at this point we can save any one of the `data.frames` containing the statistical test results, either to a compressed format (`rds`) to read back into a later R notebook, or a flatfile  (`.tsv`) to read with e.g excel.
+```{r, eval=FALSE}
+# These lines are not run and are examples only
+
+ # Saving to R binary format. Can read back into memory with readRDS().
+saveRDS(silac_compare_tests, 'filename_to_save_to.rds')
+
+# Saving to tab-separated (human-readable) flatfile
+write.csv(silac_compare_tests, 'filename_to_save_to.tsv', sep='\t', row.names=FALSE)
 ```
 
 > ### Extended Exercise (Optional)
