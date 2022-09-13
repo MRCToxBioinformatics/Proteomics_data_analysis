@@ -81,6 +81,8 @@ Additional subsections are included to cover further topics for each flavour.
 
 - [Data processing and QC](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ.html)
 
+- [Statistical testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/Stats_diff_abundance_LFQ.html)
+
 - [Comparing robust and maxLFQ summarisation to protein-level abundances](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_maxlfq.html)
 
 - [An alternative normalisation using a prior expectation](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/LFQ_alternative_normalisation.html)
