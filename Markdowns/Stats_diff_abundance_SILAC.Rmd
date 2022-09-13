@@ -42,11 +42,12 @@ false positives and increases statistical power.
 
 - **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]: limma assumes there is a relationship between protein abundance and
 variance. This is usually the case, although for SILAC
+
   - The relationship with variance is often stronger with the number of peptides
   - The quantification value is the ratio, not protein abundance and there is no
   reason to believe there will be a relationship between the mean ratio and variance
-  
-  As such, `DEqMS` should be preferred over limma.
+
+As such, `DEqMS` should be preferred over limma.
 
 Here, we will perform statistical analyses on SILAC data.
 
@@ -76,7 +77,7 @@ library(biobroom)
 ## Input data
 
 Here, we will start with the SILAC data processed in [Processing and QC of SILAC data](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC.html).
-Please see the previous notebook for details of the experimental design and aim and data processing. 
+Please see the previous notebook for details of the experimental design and aim and data processing.
 
 In brief, we wish to determine the proteins which are significantly enriched by UV crosslinking (CL) vs non-CL control (NC).
 
@@ -95,8 +96,8 @@ We will use two approaches:
 - one sample t-test
 - moderated one sample t-test (DEqMS)
 
-### T-test 
-To perform a t-test for each protein, we want to extract the quantification values in a long 'tidy' format. We can do this using the biobroom package
+### T-test
+To perform a t-test for each protein, we want to extract the quantification values in a long 'tidy' format. We can do this using the `biobroom` package
 ```{r}
 silac_protein_tidy <- silac_protein %>%
   biobroom::tidy.MSnSet() %>%
@@ -135,13 +136,12 @@ tidy(t.test.res)
 ```
 
 We can now apply a t-test to every protein using dplyr `group` and `do`, making use of `tidy`.
-
-
 ```{r}
 t.test.res.all <- silac_protein_tidy %>%
   group_by(protein) %>%
   do(tidy(t.test(.$value, alternative='two.sided')))
 ```
+
 
 Here are the results for the t-test for the example protein. As we can see, the 'estimate' column in `t.text.res.all` is the mean log2 ratio. The 'statistic' column is the t-statistic and the 'parameter' column is the degrees of freedom for the t-statistic. All the values are identical since have performed the exact same test with both approaches.
 ```{r}
@@ -149,7 +149,8 @@ print(t.test.res)
 t.test.res.all %>% filter(protein==example_protein)
 
 ```
-When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
+
+When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests.
 
 
 ```{r}
@@ -164,8 +165,8 @@ hist(t.test.res.all$p.value, 20)
 
 ```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
 # Here, we have so many significant tests that the uniform distribution is hard to assess!
-# Note that, beyond the clear peak for very low p-values (<0.05), we also have a 
-# slight skew towards low p-values in the range 0.05-0.15. 
+# Note that, beyond the clear peak for very low p-values (<0.05), we also have a
+# slight skew towards low p-values in the range 0.05-0.15.
 # This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.
 ```
 
@@ -200,7 +201,7 @@ t.test.res.all %>%
 
 > ### Discussion
 > SILAC ratios are equivalent to the absolute abundance ratios between two or more samples.
-> If this experiment had been performed using LFQ or TMT, which quantify the 
+> If this experiment had been performed using LFQ or TMT, which quantify the
 > relative abundances in each sample, how would you expect the above volcano plot
 > to look?
 
@@ -218,23 +219,23 @@ t.test.res.all %>%
 To identify proteins with significantly increased abundance in CL vs NC, we will
 use DEqMS [@http://zotero.org/users/5634351/items/RTM6NFVU], which you can think
 of as an extension of limma [@http://zotero.org/users/5634351/items/6KTXTWME]
-specifically for proteomics. 
+specifically for proteomics.
 
 The analysis steps are taken from the
 [DEqMS vignette](https://bioconductor.org/packages/release/bioc/vignettes/DEqMS/inst/doc/DEqMS-package-vignette.html#extract-quant-data-columns-for-deqms).
-We first want to create an `MArrayLM` object as per normal `limma` analysis and 
+We first want to create an `MArrayLM` object as per normal `limma` analysis and
 then  add a `$count` column to the `MArrayLM` object and use the `spectraCounteBayes`
 function to perform the Bayesian shrinkage using the count column, which describes
 the number of pepitdes per protein. This is contrast to `limma`, which uses the
 `$Amean` column, which describes the mean CL:NC ratio.
 
-First, we create the `MArrayLM` object. 
+First, we create the `MArrayLM` object.
 ```{r}
-dat <- silac_protein  %>% 
+dat <- silac_protein  %>%
   exprs()
 
 # Performing the equivalent of a one-sample t-test, so the design matrix is just an intercept
-design <- cbind(Intercept = rep(1, ncol(dat))) 
+design <- cbind(Intercept = rep(1, ncol(dat)))
 
 fit <- lmFit(dat, design)
 efit <- eBayes(fit)
@@ -252,7 +253,7 @@ protein_ratio_long <- silac_protein %>%
 
 pep_res <- readRDS('results/pep_res.rds')
 
-# Obtain the min peptide count across the samples and determine the minimum value across 
+# Obtain the min peptide count across the samples and determine the minimum value across
 # samples
 min_pep_count <- camprotR::count_features_per_protein(pep_res) %>%
   merge(protein_ratio_long, by=c('Master.Protein.Accessions', 'sample')) %>%
@@ -272,14 +273,14 @@ efit_deqms <- suppressWarnings(spectraCounteBayes(efit))
 
 
 
-Below, we inspect the peptide count vs variance relationship which `DEqMS` is 
+Below, we inspect the peptide count vs variance relationship which `DEqMS` is
 using in the statistical test.
 
 In this case the relationship between peptide count and variance is only really
-apparent when the minimum number of peptides from which a protein-level ratio is 
-obtained is very low. Typically, one might remove quantification values where there is 
-just a single peptide for a protein. Here, we have kept them, and we can refer to 
-the `count` column in the final results object if we want to check the minimum 
+apparent when the minimum number of peptides from which a protein-level ratio is
+obtained is very low. Typically, one might remove quantification values where there is
+just a single peptide for a protein. Here, we have kept them, and we can refer to
+the `count` column in the final results object if we want to check the minimum
 number of peptides observed per sample.
 
 ```{r, fig.height=5, fig.width=5}
@@ -288,10 +289,10 @@ VarianceBoxplot(efit_deqms, n = 30, xlab = "Peptides")
 ```
 
 
-Below, we summarise the number of proteins with statistically different abundance 
-in CL vs NC and plot a 'volcano' plot to visualise this. 
+Below, we summarise the number of proteins with statistically different abundance
+in CL vs NC and plot a 'volcano' plot to visualise this.
 
-Here, all proteins with a statistically significant change are increased in CL, so the plot looks 
+Here, all proteins with a statistically significant change are increased in CL, so the plot looks
 more like a fire-hose than a volcano!
 
 ```{r, fig.height=6, fig.width=6}
@@ -305,7 +306,7 @@ deqms_results %>%
   labs(x = 'CL vs NC (Log2)', y = '-log10(p-value)')
 ```
 
-Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columns are from `limma`. The columns prefixed with `sca` are the from `DEqMS`. 
+Finally, we can explore and, if we wish, export our results. Importantly, the `$t`, `$P.Value` and `$adj.P.Val` columns are from `limma`. The columns prefixed with `sca` are the from `DEqMS`.
 
 ```{r}
 head(deqms_results)
@@ -347,6 +348,8 @@ ggplot(silac_compare_tests) +
   geom_abline(slope=1) +
   theme_camprot(border=FALSE) +
   labs(x='t.test mean ratio', y='DEqMS mean ratio')
+
+# The ratios are the same. DEqMS (and limma) are moderating the test statistics, but not the estimated fold-change.
 ```
 
 We can also compare the p-values from the two tests. Note that the p-value is almost
@@ -389,9 +392,9 @@ write.csv(silac_compare_tests, 'filename_to_save_to.tsv', sep='\t', row.names=FA
 
 > ### Extended Exercise (Optional)
 > Compare the number of significant differences (at 1% FDR) for each method,
-> stratifying by the number of peptides per protein. An example of how to visualise 
+> stratifying by the number of peptides per protein. An example of how to visualise
 > this is below, though you do not need to replicate this visualisation precisely!
-> 
+>
 > How do you interpet this?
 >
 > Hints:
@@ -401,7 +404,7 @@ write.csv(silac_compare_tests, 'filename_to_save_to.tsv', sep='\t', row.names=FA
 
 
 > Solution
-```{r class.source = 'fold-hide', eval=FALSE}
+```{r class.source = 'fold-hide'}
 
 # Start by tallying as in code chunk above
 silac_compare_tests %>%
@@ -409,16 +412,16 @@ silac_compare_tests %>%
            't-test'=t.test.padj<0.01,
            'deqms'=deqms.sca.adj.pval<0.01) %>%
   tally() %>%
-  
-  # make a single column describing yes/no significant with each method and 
+
+  # make a single column describing yes/no significant with each method and
   # rename to make it more intuitive
-  mutate(compare_tests=recode(interaction(`t-test`, deqms), 
+  mutate(compare_tests=recode(interaction(`t-test`, deqms),
                               'FALSE.FALSE'='Neither',
                               'TRUE.TRUE'='Both',
                               'TRUE.FALSE'='t-test',
                               'FALSE.TRUE'='DEqMS')) %>%
   mutate(compare_tests=factor(compare_tests, levels=c('t-test', 'DEqMS', 'Both', 'Neither'))) %>%
-  
+
   ggplot(aes(min_peptides, n, fill=compare_tests)) +
   geom_bar(stat='identity',position='fill') +
   geom_text(position=position_fill(vjust=0.5), aes(label=n)) +
