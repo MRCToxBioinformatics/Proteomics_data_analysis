@@ -228,7 +228,7 @@ limma::plotSA(limma_fit)
 ```
 
 
-> ### Discussion
+> ### Discussion 1
 > How would you interpret the plot above?
 >
 
@@ -268,7 +268,7 @@ limma_results %>%
   labs(x = 'RNase +/- (Log2)', y = '-log10(p-value)')
 ```
 
-> ### Discussion
+> ### Discussion 2
 >
 > 1. Given the experimental design, would you expect proteins to have signficant
 > changes in both directions?

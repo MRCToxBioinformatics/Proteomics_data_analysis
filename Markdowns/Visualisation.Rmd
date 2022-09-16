@@ -23,8 +23,6 @@ library(MSnbase)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-#library(broom)
-#library(biobroom)
 library(pheatmap)
 ```
 
@@ -41,7 +39,7 @@ As a reminder, this data comes from a published benchmark experiment where yeast
 ### Single gene plots
 ```{r}
 single_protein <- tmt_protein[1,] %>% # taking the first protein as an example
-  tidy(addPheno=TRUE)
+  biobroom::tidy.MSnSet(addPheno=TRUE)
 
 print(single_protein)
 ```

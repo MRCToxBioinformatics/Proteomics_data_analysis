@@ -73,13 +73,14 @@ We can explore the structure of the input data using `str`. We see that we have 
 str(pep_data)
 ```
 
-> ### Discussion (1)
+> ### Discussion 1
 >
 > Examine the column names and answer the following:
 >
 > How do the numerical values in the Abundance.F*.Sample columns relate
 > to the conditions (RNase +/-)?
 
+> Solution
 
 ```{r class.source = 'fold-hide', eval=FALSE}
 # It's not possible to tell!
@@ -208,8 +209,8 @@ First of all, we want to inspect the peptide intensity distributions.
 > - You can access the assay data using `exprs(pep)`
 > - You will need to log-transform the abundances to make them interpretable
 
+> Solution
 
->### Solution
 ```{r class.source = 'fold-hide', eval=FALSE}
 log(pep, base=2) %>% exprs() %>% boxplot()
 ```
@@ -266,7 +267,7 @@ print(p)
 > calling `is.na(exprs(obj))`
 
 
-> ### Solution
+> Solution
 
 ```{r class.source = 'fold-hide'}
 
@@ -313,9 +314,11 @@ RNase negative replicate 4 had slightly lower overall peptide intensities and ap
 
 We don't have internal benchmark proteins we can normalise against, so we will only be able to assess protein abundances relative to the protein present in each sample. Since we injected the same quantity of peptides for each sample, your intuition may be that there should be no reason to normalise and to do so risks removing true biological variance.
 
-> ### Discussion (2)
+> ### Discussion 2
 >
 > What technical explanations can you think of which would explain the differences in intensity?
+
+> Solution
 
 ```{r class.source = 'fold-hide', eval=FALSE}
 # 1. Incorrect total peptide quantification leading to under/over-injection of peptides

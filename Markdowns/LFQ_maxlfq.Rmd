@@ -121,7 +121,7 @@ compare_protein_abundances <- rbind(
 > column for each method
 
 
-### Solution
+> Solution
 
 ```{r class.source = 'fold-hide', echo=FALSE}
 # Plot direct comparison

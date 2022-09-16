@@ -89,7 +89,7 @@ print(colnames(infdata))
 > 2. What columns contain the abundances for the the Light and Heavy-labelled samples?
 > 3. How do the Light and Heavy samples relatea to the conditions (UV crosslinking +/-)?
 
-> ### Solution
+> Solution
 
 ```{r class.source = 'fold-hide'}
 # 1. Protein.Accessions are all the proteins a sequence can match to.
@@ -203,7 +203,7 @@ abundance_data_complete <- do.call('rbind', annot_pep_data_parsed) %>%
 > 
 > Add a new column to `abundance_data_complete` which gives the CL/NC ratio
 
-> #### Solution
+> Solution
 
 ```{r class.source = 'fold-hide', eval=FALSE}
 abundance_data_complete %>% mutate(ratio=CL/NC)
@@ -245,7 +245,7 @@ missing_tallies %>%
 > denotes the missing status (see below for how it should look)
 
 
-> #### Solution
+> Solution
 
 ```{r class.source = 'fold-hide', fig.height=3, fig.width=6}
 missing_tallies <- ratios %>%
@@ -381,6 +381,12 @@ matched_tallies %>%
 > Discussion
 > Why are more peptides spectrum matched in just CL? 
 
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE}
+# The CL peptides are higher intensity
+```
+
 ### Not all peptide ratios are equally accurate
 
 Now we have summarise the 'spectrum matched' information, we can then consider how this relates to the correlation between CL and NC. 
@@ -514,7 +520,7 @@ print(pep_res)
 > 1. How many peptides are there?
 > 2. How many feature columns are there?
 
-> ### Solution
+> Solution
 
 ```{r class.source = 'fold-hide', eval=FALSE}
 nrow(pep_res) #1

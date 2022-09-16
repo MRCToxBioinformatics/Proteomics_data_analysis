@@ -157,7 +157,7 @@ When you are performing a lot of statistical tests at the same time, it's recomm
 hist(t.test.res.all$p.value, 20)
 ```
 
-> ### Discussion
+> ### Discussion 1
 > What would you conclude from the p-value distribution above?
 >
 
@@ -199,7 +199,7 @@ t.test.res.all %>%
   labs(x = 'CL vs NC (Log2)', y = '-log10(p-value)')
 ```
 
-> ### Discussion
+> ### Discussion 2
 > SILAC ratios are equivalent to the absolute abundance ratios between two or more samples.
 > If this experiment had been performed using LFQ or TMT, which quantify the
 > relative abundances in each sample, how would you expect the above volcano plot
@@ -404,6 +404,7 @@ write.csv(silac_compare_tests, 'filename_to_save_to.tsv', sep='\t', row.names=FA
 
 
 > Solution
+
 ```{r class.source = 'fold-hide'}
 
 # Start by tallying as in code chunk above
