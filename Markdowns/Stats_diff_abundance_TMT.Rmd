@@ -22,10 +22,10 @@ knitr::opts_chunk$set(
 There are a number of statistical tests/R packages one can use to perform differential abundance testing for proteomics data. The list below is by no means complete:
 
 - **t-test**: If we assume that the quantification values are Gaussian
-distributed, a t-test may be appropriate. For TMT, log-transformed abundances can 
-be assumed to be Gaussian distributed. When we have one condition variable and we 
-are comparing between two values variable in a TMT experiment (e.g samples are 
-treatment or control), a two-sample t-test is appropriate. 
+distributed, a t-test may be appropriate. For TMT, log-transformed abundances can
+be assumed to be Gaussian distributed. When we have one condition variable and we
+are comparing between two values variable in a TMT experiment (e.g samples are
+treatment or control), a two-sample t-test is appropriate.
 
 - **ANOVA/linear model**: Where a more complex experimental design is involved,
 an ANOVA or linear model can be used, on the same assumptions at the t-test.
@@ -37,11 +37,11 @@ the t-test/ANOVA/linear model testing framework to enable sharing of information
 across features (here, proteins) to update the variance estimates. This decreases
 false positives and increases statistical power.
 
-- **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]: 
+- **`DEqMS`** [@http://zotero.org/users/5634351/items/RTM6NFVU]:
 limma assumes there is a relationship between protein abundance and
-variance. This is usually the case, although the relationship with variance is 
+variance. This is usually the case, although the relationship with variance is
 sometimes stronger with the number of peptide spectrum matches (for TMT experiments),
-  
+
 re, we will perform statistical analyses on TMT proteomics data.
 
 
@@ -72,7 +72,7 @@ library(uniprotREST)
 ## Input data
 
 Here, we will start with the TMT data processed in [DQC PSM-level quantification and summarisation to protein-level abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT.html).
-Please see the previous notebook for details of the experimental design and aim and data processing. 
+Please see the previous notebook for details of the experimental design and aim and data processing.
 
 As a reminder, this data comes from a published benchmark experiment where yeast peptides were spiked into human peptides at 3 known amounts to provide ground truth fold changes (see below). For more details, see: [@http://zotero.org/users/5634351/items/LG3W8G4T]
 
@@ -102,7 +102,7 @@ We will use two approaches to identify proteins with significant differences in 
 - moderated two-sample t-test (limma)
 - moderated two-sample t-test (DEqMS)
 
-### T-test 
+### T-test
 To perform a t-test for each protein, we want to extract the quantification values in a long 'tidy' format. We can do this using the biobroom package
 
 
@@ -120,11 +120,11 @@ example_protein <- 'P40414'
 
 tmt_protein_tidy_example <- tmt_protein_tidy %>%
   filter(protein==example_protein) %>%
-  select(-sample) 
+  select(-sample)
 
 print(tmt_protein_tidy_example)
 ```
-Then we use `t.test` to perform the t-test. 
+Then we use `t.test` to perform the t-test.
 
 ```{r}
 
@@ -160,7 +160,7 @@ print(t.test.res)
 t.test.res.all %>% filter(protein==example_protein)
 ```
 
-When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests. 
+When you are performing a lot of statistical tests at the same time, it's recommended practice to plot the p-value distribution. If the assumptions of the test are valid, one expects a uniform distribution from 0-1 for those tests where the null hypothesis should not be rejected. Statistically significant tests will show as a peak of very low p-values. If there are very clear skews in the uniform distribution, or strange peaks other than in the smallest p-value bin, that may indicate the assumptions of the test are not valid, for some or all tests.
 
 Here, we have so many significant tests that the uniform distribution is hard to assess. Note that, beyond the clear peak for very low p-values (<0.05) we also have a slight skew towards low p-values in the range 0.05-0.2. This may indicate insufficient statistical power to detect some proteins that are truly differentially abundant.  
 ```{r}
@@ -178,10 +178,10 @@ hist(t.test.res.all$p.value, 20)
 # Here, we have so many significant tests that the uniform distribution is hard to assess!
 # Note that, beyond the clear peak for very low p-values (<0.05), we also have a
 # slight skew towards low p-values in the range 0.05-0.2.
-# This may indicate insufficient statistical power to detect some proteins that 
+# This may indicate insufficient statistical power to detect some proteins that
 # are truly differentially abundant.
 ```
-
+> Solution end
 
 
 Since we have performed multiple tests, we want to calculate an adjusted p-value
@@ -219,7 +219,7 @@ Next, we create the `MArrayLM` object and a design model. We then supply these t
 exprs_for_limma <- exprs(tmt_protein)
 
 # Performing the equivalent of a two-sample t-test
-spike <- pData(tmt_protein)$spike 
+spike <- pData(tmt_protein)$spike
 
 limma_design <- model.matrix(formula(~spike))
 
@@ -235,7 +235,7 @@ limma::plotSA(limma_fit)
 
 
 > ### Discussion
-> 
+>
 > How would you interpret the plot above?
 >
 
@@ -245,8 +245,9 @@ limma::plotSA(limma_fit)
 # There's a really clear relationship between protein abundance and variance!
 
 ```
+> Solution end
 
-In this case, the variances will be shrunk towards a value that depends on the 
+In this case, the variances will be shrunk towards a value that depends on the
 mean protein abundance vs variance trend
 
 We can extract a results table like so.
@@ -290,8 +291,10 @@ limma_results[example_protein,]
 # proteins decrease in abundance (to balance out the total amount of protein in the samples)
 
 ```
+> Solution end
 
-It would make more sense to split the volcano plot by the species from which the protein derived. 
+
+It would make more sense to split the volcano plot by the species from which the protein derived.
 We can obtain this information from uniprot like so.
 ```{r}
 species <-  uniprot_map(
@@ -322,7 +325,7 @@ limma_results %>%
   facet_wrap(~(gsub('\\(.*', '', Organism)))
 
 ```
-
+> Solution end
 
 
 We can now compare the results from the t-test and the moderated t-test (limma).
@@ -507,4 +510,3 @@ write.csv(deqms_results, 'filename_to_save_to.tsv', sep='\t', row.names=FALSE)
 ```{r sessionInfo, echo=FALSE}
 sessionInfo()
 ```
-

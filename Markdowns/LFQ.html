@@ -613,6 +613,9 @@ to the conditions (RNase +/-)?</p>
 <p>Solution</p>
 </blockquote>
 <pre class="r fold-hide"><code># It&#39;s not possible to tell!</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <hr />
 <p>The <code>InputFiles.txt</code> file from PD can be used to determine
 the relationship between the Abundance.F*.Sample columns and the
@@ -911,6 +914,9 @@ interpretable</li>
 <p>Solution</p>
 </blockquote>
 <pre class="r fold-hide"><code>log(pep, base=2) %&gt;% exprs() %&gt;% boxplot()</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <hr />
 <p>The above code give us a crude representation. We could make this
 prettier, but <code>camprotR</code> already has a function to explore
@@ -996,6 +1002,9 @@ colSums(is.na(pep)) #3
 #&gt;        2098        2766
 sum(rowSums(is.na(pep))==0) #4
 #&gt; [1] 2085</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <hr />
 <p>So, from the 7250 peptides, just 2085 have quantification values in
 all 8 samples. This is not a surprise for LFQ, since each sample is
@@ -1049,6 +1058,9 @@ differences in intensity?</p>
 </blockquote>
 <pre class="r fold-hide"><code># 1. Incorrect total peptide quantification leading to under/over-injection of peptides
 # 2. Differences between separate MS runs (especially when lots of samples are being processed)</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <hr />
 <p>The technical explanations are compelling. Futhermore, we can only
 assess relative quantification since we have unknown losses of material

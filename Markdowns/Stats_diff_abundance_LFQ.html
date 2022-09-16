@@ -715,6 +715,9 @@ the variance using the <code>limma::plotSA</code> function.</p>
 </blockquote>
 <pre class="r fold-hide"><code># Surprisingly, there&#39;s no clear relationship between protein abundance and variance
 </code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>Despite the lack of a strong relationship between protein abundance
 and variance, we will continue with limma regardless, since it will
 still increase the effective degrees of freedom with which the gene-wise
@@ -759,6 +762,9 @@ the absolute protein abundances?</li>
 # 2. The protein abundances are relative to the total amount of protein in each sample. Thus, the fold changes are relative to the overall fold-change in the amount of protein in each sample. For example, if there is a global loss of protein in RNase + samples, a positive RNase +/- ratio only represents a increase relative to the global loss, and could be a negative RNase +/- ratio in absolute terms!
 # 3. We are seeing positive RNase +/- ratios because there is a global difference in the amount of protein and we are using a relative protein abundance quantification approach.
 </code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>We can now compare the results from the t-test and the moderated
 t-test (limma). Below, we update the column names so it’s easier to see
 which column comes from which test and then merge the two test
@@ -790,6 +796,9 @@ t-tests. Can you explain what you observe?</p>
 
 # The logFC are the same! Remember that limma is not changing the underlying data,
 # just moderating the test statistics.</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>We can also compare the p-values from the two tests. Note that the
 p-value is almost always lower for the moderated t-test with
 <code>limma</code> than the standard t-test.</p>

@@ -666,6 +666,9 @@ from the PSM-level quantification?</li>
 # summarisation approach in MSnbase::combineFeatures() may be appropriate
 # (following log-transformation) since this handles missing data appropriately
 </code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>For PSM to protein summarisation, we will use naive ‘sum’
 summarisation (<code>MSnbase::combineFeatures(method = &#39;sum&#39;)</code>).
 This approach does not appropriately handle missing values, since it
@@ -717,15 +720,15 @@ if we are in doubt about the processing. Here, it tells us that we log2
 transformed and then used <code>diff.median</code> normalisation.</p>
 <pre class="r"><code>processingData(protein_norm)
 #&gt; - - - Processing information - - -
-#&gt; Subset [106462,10][105709,10] Fri Sep 16 13:12:13 2022 
-#&gt; Subset [105709,10][103307,10] Fri Sep 16 13:12:13 2022 
-#&gt; Subset [103307,10][100612,10] Fri Sep 16 13:12:13 2022 
-#&gt; Subset [100612,10][100347,10] Fri Sep 16 13:12:13 2022 
-#&gt; Removed features with more than 0 NAs: Fri Sep 16 13:12:13 2022 
-#&gt; Dropped featureData&#39;s levels Fri Sep 16 13:12:13 2022 
-#&gt; Combined 100347 features into 9952 using sum: Fri Sep 16 13:12:32 2022 
-#&gt; Log transformed (base 2) Fri Sep 16 13:12:33 2022 
-#&gt; Normalised (diff.median): Fri Sep 16 13:12:33 2022 
+#&gt; Subset [106462,10][105709,10] Fri Sep 16 16:00:02 2022 
+#&gt; Subset [105709,10][103307,10] Fri Sep 16 16:00:02 2022 
+#&gt; Subset [103307,10][100612,10] Fri Sep 16 16:00:02 2022 
+#&gt; Subset [100612,10][100347,10] Fri Sep 16 16:00:02 2022 
+#&gt; Removed features with more than 0 NAs: Fri Sep 16 16:00:02 2022 
+#&gt; Dropped featureData&#39;s levels Fri Sep 16 16:00:02 2022 
+#&gt; Combined 100347 features into 9952 using sum: Fri Sep 16 16:00:20 2022 
+#&gt; Log transformed (base 2) Fri Sep 16 16:00:21 2022 
+#&gt; Normalised (diff.median): Fri Sep 16 16:00:21 2022 
 #&gt;  MSnbase version: 2.20.4</code></pre>
 <p>Now we have filtered our PSM-level quantification, summarised to
 protein-level and normalised. We can use this object to perform

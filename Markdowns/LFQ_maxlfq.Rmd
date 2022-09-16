@@ -141,7 +141,7 @@ compare_protein_abundances %>%
   select(Robust, MaxLFQ) %>%
   cor()
 ```
-
+> Solution end
 
 
 There is a very good overall correlation. Let's inspect a few proteins with the largest differences between the two approaches to see what's going on for the edge cases.

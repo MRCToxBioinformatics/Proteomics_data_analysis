@@ -85,7 +85,7 @@ str(pep_data)
 ```{r class.source = 'fold-hide', eval=FALSE}
 # It's not possible to tell!
 ```
-
+> Solution end
 
 ---
 
@@ -214,6 +214,7 @@ First of all, we want to inspect the peptide intensity distributions.
 ```{r class.source = 'fold-hide', eval=FALSE}
 log(pep, base=2) %>% exprs() %>% boxplot()
 ```
+> Solution end
 
 ---
 
@@ -276,7 +277,7 @@ mean(is.na(pep)) #2
 colSums(is.na(pep)) #3
 sum(rowSums(is.na(pep))==0) #4
 ```
-
+> Solution end
 
 ---
 
@@ -324,6 +325,7 @@ We don't have internal benchmark proteins we can normalise against, so we will o
 # 1. Incorrect total peptide quantification leading to under/over-injection of peptides
 # 2. Differences between separate MS runs (especially when lots of samples are being processed)
 ```
+> Solution end
 
 ---
 

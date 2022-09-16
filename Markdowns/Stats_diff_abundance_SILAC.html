@@ -671,6 +671,9 @@ tests.</p>
 # Note that, beyond the clear peak for very low p-values (&lt;0.05), we also have a
 # slight skew towards low p-values in the range 0.05-0.15.
 # This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>Since we have performed multiple tests, we want to calculate an
 adjusted p-value to avoid type I errors (false positives).</p>
 <p>Here, are using the Benjamini, Y., and Hochberg, Y. (1995) method to
@@ -709,6 +712,9 @@ you expect the above volcano plot to look?</p>
 # in CL would be masked by the comparison of the relative abundances in CL and NC.
 # Protein which are highly enriched with CL would have reduced ratios and those with more slight
 # enrichments may even appear to be relatively depleted!</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 </div>
 <div id="moderated-t-test-deqms" class="section level3">
 <h3>Moderated t-test (DEqMS)</h3>
@@ -837,6 +843,9 @@ plot. Can you explain what you observe?</p>
   labs(x=&#39;t.test mean ratio&#39;, y=&#39;DEqMS mean ratio&#39;)
 
 # The ratios are the same. DEqMS (and limma) are moderating the test statistics, but not the estimated fold-change.</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>We can also compare the p-values from the two tests. Note that the
 p-value is almost always lower for the moderated t-test with DEqMS than
 the standard t-test.</p>
@@ -921,6 +930,9 @@ silac_compare_tests %&gt;%
 # Note that the 3 proteins which are only significant with the t-test have a
 # minimum of 1/2 peptides per sample. These are likely to be poorly quantified
 # and falsely identified as CL-enriched.</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 </div>
 </div>
 <div id="references" class="section level2 unlisted unnumbered">

@@ -169,7 +169,7 @@ hist(t.test.res.all$p.value, 20)
 # slight skew towards low p-values in the range 0.05-0.15.
 # This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.
 ```
-
+> Solution end
 
 Since we have performed multiple tests, we want to calculate an adjusted p-value
 to avoid type I errors (false positives).
@@ -213,6 +213,8 @@ t.test.res.all %>%
 # Protein which are highly enriched with CL would have reduced ratios and those with more slight
 # enrichments may even appear to be relatively depleted!
 ```
+> Solution end
+
 
 ### Moderated t-test (DEqMS)
 
@@ -351,6 +353,8 @@ ggplot(silac_compare_tests) +
 
 # The ratios are the same. DEqMS (and limma) are moderating the test statistics, but not the estimated fold-change.
 ```
+> Solution end
+
 
 We can also compare the p-values from the two tests. Note that the p-value is almost
 always lower for the moderated t-test with DEqMS than the standard t-test.
@@ -434,7 +438,7 @@ silac_compare_tests %>%
 # minimum of 1/2 peptides per sample. These are likely to be poorly quantified
 # and falsely identified as CL-enriched.
 ```
-
+> Solution end
 
 ## References {.unlisted .unnumbered}
 

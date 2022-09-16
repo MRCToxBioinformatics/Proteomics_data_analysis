@@ -238,7 +238,7 @@ limma::plotSA(limma_fit)
 # Surprisingly, there's no clear relationship between protein abundance and variance
 
 ```
-
+> Solution end
 
 Despite the lack of a strong relationship between protein abundance and variance,
 we will continue with limma regardless, since it will still increase the effective
@@ -284,7 +284,7 @@ limma_results %>%
 # 3. We are seeing positive RNase +/- ratios because there is a global difference in the amount of protein and we are using a relative protein abundance quantification approach.
 
 ```
-
+> Solution end
 
 We can now compare the results from the t-test and the moderated t-test (limma).
 Below, we update the column names so it's easier to see which column comes from which test and then merge the two test results.
@@ -320,6 +320,7 @@ ggplot(lfq_compare_tests) +
 # The logFC are the same! Remember that limma is not changing the underlying data,
 # just moderating the test statistics.
 ```
+> Solution end
 
 We can also compare the p-values from the two tests. Note that the p-value is almost
 always lower for the moderated t-test with `limma` than the standard t-test.

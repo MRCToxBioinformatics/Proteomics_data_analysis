@@ -164,7 +164,7 @@ Now that we have inspected the PSM-level quantification and filtered the PSMs, w
 # (following log-transformation) since this handles missing data appropriately
 
 ```
-
+> Solution end
 
 
 For PSM to protein summarisation, we will use naive 'sum' summarisation (`MSnbase::combineFeatures(method = 'sum')`). This approach does not appropriately handle missing values, since it either returns NA if any value is missing, or, with `na.rm=TRUE` included, replaces NA with zero where there is at least one finite quantification value for a protein. As such, we will remove the few PSMs with any missing values

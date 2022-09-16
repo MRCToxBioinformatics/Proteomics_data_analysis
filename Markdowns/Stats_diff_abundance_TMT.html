@@ -577,7 +577,7 @@ example_protein &lt;- &#39;P40414&#39;
 
 tmt_protein_tidy_example &lt;- tmt_protein_tidy %&gt;%
   filter(protein==example_protein) %&gt;%
-  select(-sample) 
+  select(-sample)
 
 print(tmt_protein_tidy_example)
 #&gt; # A tibble: 7 × 3
@@ -676,8 +676,11 @@ detect some proteins that are truly differentially abundant.</p>
 <pre class="r fold-hide"><code># Here, we have so many significant tests that the uniform distribution is hard to assess!
 # Note that, beyond the clear peak for very low p-values (&lt;0.05), we also have a
 # slight skew towards low p-values in the range 0.05-0.2.
-# This may indicate insufficient statistical power to detect some proteins that 
+# This may indicate insufficient statistical power to detect some proteins that
 # are truly differentially abundant.</code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>Since we have performed multiple tests, we want to calculate an
 adjusted p-value to avoid type I errors (false positives).</p>
 <p>Here, are using the Benjamini, Y., and Hochberg, Y. (1995) method to
@@ -709,7 +712,7 @@ compute moderated test statistics.</p>
 exprs_for_limma &lt;- exprs(tmt_protein)
 
 # Performing the equivalent of a two-sample t-test
-spike &lt;- pData(tmt_protein)$spike 
+spike &lt;- pData(tmt_protein)$spike
 
 limma_design &lt;- model.matrix(formula(~spike))
 
@@ -728,6 +731,9 @@ the variance using the <code>limma::plotSA</code> function.</p>
 </blockquote>
 <pre class="r fold-hide"><code># There&#39;s a really clear relationship between protein abundance and variance!
 </code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>In this case, the variances will be shrunk towards a value that
 depends on the mean protein abundance vs variance trend</p>
 <p>We can extract a results table like so.</p>
@@ -774,6 +780,9 @@ signficant changes in both directions?</p>
 # that yeast proteins increase 2-fold in abundance between 2x and 1x samples, and human
 # proteins decrease in abundance (to balance out the total amount of protein in the samples)
 </code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>It would make more sense to split the volcano plot by the species
 from which the protein derived. We can obtain this information from
 uniprot like so.</p>
@@ -804,6 +813,9 @@ limma_results %&gt;%
   labs(x = &#39;2x vs 1x (Log2)&#39;, y = &#39;-log10(p-value)&#39;) +
   facet_wrap(~(gsub(&#39;\\(.*&#39;, &#39;&#39;, Organism)))
 </code></pre>
+<blockquote>
+<p>Solution end</p>
+</blockquote>
 <p>We can now compare the results from the t-test and the moderated
 t-test (limma). Below, we update the column names so it’s easier to see
 which column comes from which test and then merge the two test

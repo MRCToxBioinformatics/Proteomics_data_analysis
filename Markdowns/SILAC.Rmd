@@ -98,6 +98,7 @@ print(colnames(infdata))
 # 2. "Abundance.F26.Light.Sample" & "Abundance.F26.Heavy.Sample"
 # 3. It's not possible to tell! We'll deal with this later.
 ```
+> Solution end
 
 Your PD output may have additional columns. For example, if all your SILAC samples were simultaneously processed in PD, you will have a 'Light' and 'Heavy' column for each one.
 
@@ -208,7 +209,7 @@ abundance_data_complete <- do.call('rbind', annot_pep_data_parsed) %>%
 ```{r class.source = 'fold-hide', eval=FALSE}
 abundance_data_complete %>% mutate(ratio=CL/NC)
 ```
-
+> Solution end
 
 Here, we will calculate the CL/NC ratio using `camprotR::get_ratio`, which will also add a `missing` column to describe whether one of the quantification values is missing. This is useful for quality control purposes. `camprotR::get_ratio` expects the quantification values to be on a log scale and returns log-transformed ratios. We will use base 2 for our log transformation, since this is relatively intuitive. 
 ```{r}
@@ -258,7 +259,7 @@ missing_tallies %>%
   geom_bar(stat = 'identity', position = 'fill') +
   labs(y = 'Fraction', fill='')
 ```
-
+> Solution end
 
 ### Use the PSM files to summarise spectrum matches for each quantification value.
 
@@ -386,6 +387,7 @@ matched_tallies %>%
 ```{r class.source = 'fold-hide', eval=FALSE}
 # The CL peptides are higher intensity
 ```
+> Solution end
 
 ### Not all peptide ratios are equally accurate
 
@@ -527,7 +529,7 @@ nrow(pep_res) #1
 length(fvarLabels(pep_res)) #2
 
 ```
-
+> Solution end
 
 Note that there is also a section call 'Processing information'. This will retain
 information about any processing we perform on our data.
