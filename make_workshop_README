@@ -1,0 +1,5 @@
+To remove the Rmd and html files in the repository, use the following command line:
+
+$ for file in Markdowns/*Rmd; do  sed -i.bak '' -n -e '/> Solution/,/> Solution end/!p' $file; Rscript -e "rmarkdown::render('$file')"; done
+
+For now, the simplest approach is probably to just delete, re-create, edit and push the workshop branch as needed
