@@ -65,7 +65,7 @@ the data we will use.
   
 ## Course materials
 
-The fist part of the course is broken into sections for different 'flavours' of quantitative
+The first part of the course is broken into sections for different 'flavours' of quantitative
 bottom-up proteomics by Mass-spectrometry. Each section contains a subsection covering:
 
 - Data processing and QC which starts from the Proteome Discoverer (PD)

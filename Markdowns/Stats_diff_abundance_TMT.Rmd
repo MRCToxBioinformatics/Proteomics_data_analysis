@@ -325,6 +325,7 @@ limma_results %>%
 ```
 
 
+
 We can now compare the results from the t-test and the moderated t-test (limma).
 Below, we update the column names so it's easier to see which column comes from which test and then merge the two test results.
 ```{r}
