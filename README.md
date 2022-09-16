@@ -26,5 +26,5 @@ To ensure all the neccessary R packages are installed to run the code in
 the tutorials, you can install this package
 
 ``` r
-remotes::install_github("MRCToxBioinformatics/Proteomics_data_analysis", build_vignettes = TRUE)
+remotes::install_github("MRCToxBioinformatics/Proteomics_data_analysis", build_vignettes = TRUE, dependencies = TRUE)
 ```
