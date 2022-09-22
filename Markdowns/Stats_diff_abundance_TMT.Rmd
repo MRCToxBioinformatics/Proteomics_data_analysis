@@ -42,9 +42,6 @@ limma assumes there is a relationship between protein abundance and
 variance. This is usually the case, although the relationship with variance is
 sometimes stronger with the number of peptide spectrum matches (for TMT experiments),
 
-re, we will perform statistical analyses on TMT proteomics data.
-
-
 These are examples only and the code herein is unlikely to be directly applicable
 to your own dataset.
 
@@ -167,7 +164,7 @@ Here, we have so many significant tests that the uniform distribution is hard to
 hist(t.test.res.all$p.value, 20)
 ```
 
-> ### Discussion
+> ### Discussion 1
 >
 > What would you conclude from the p-value distribution above?
 >
@@ -198,7 +195,6 @@ table(t.test.res.all$padj<0.01)
 
 At an FDR of 1%, we have `r sum(t.test.res.all$padj<0.01)` proteins with a significant difference.
 
-WORK FROM HERE!
 
 ### Moderated t-test (limma)
 
@@ -207,8 +203,6 @@ Variance estimates are therefore inaccurate. `limma` [@http://zotero.org/users/5
 the t-test/ANOVA/linear model testing framework to enable sharing of information
 across features (here, proteins) to update the variance estimates. This decreases
 false positives and increases statistical power.
-
-
 
 
 Next, we create the `MArrayLM` object and a design model. We then supply these to
@@ -234,7 +228,7 @@ limma::plotSA(limma_fit)
 ```
 
 
-> ### Discussion
+> ### Discussion 2
 >
 > How would you interpret the plot above?
 >
@@ -278,7 +272,7 @@ limma_results[example_protein,]
 ```
 
 
-> ### Discussion
+> ### Discussion 3
 >
 > Given the experimental design, would you expect proteins to have signficant
 > changes in both directions?
@@ -339,31 +333,8 @@ tmt_compare_tests <- merge(
 
 ```
 
-> ### Exercise 2
-> Compare the effect size estimates from t-test vs the moderated t-tests.
-> Can you explain what you observe?
->
-> Hints:
->
-> - For the t-test, you want the 't.test.estimate' column
-> - For the moderated t-test, you can use the 'limma.logFC' column
 
-
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-ggplot(tmt_compare_tests) +
-  aes(t.test.estimate, limma.logFC) +
-  geom_point() +
-  geom_abline(slope=-1) +
-  theme_camprot(border=FALSE) +
-  labs(x='t-test logFC', y='limma logFC')
-
-# The logFC are the same, but the comparison is being made in opposite directions. Remember that limma is not changing the underlying data,
-# just moderating the test statistics.
-```
-
-We can also compare the p-values from the two tests. Note that the p-value is almost
+Below, we can compare the p-values from the two tests. Note that the p-value is almost
 always lower for the moderated t-test with `limma` than the standard t-test.
 
 ```{r}
@@ -441,8 +412,6 @@ efit_deqms <- suppressWarnings(spectraCounteBayes(limma_fit))
 Below, we inspect the peptide count vs variance relationship which `DEqMS` is
 using in the statistical test.
 
-In this case the relationship between peptide count and variance is not clear at all.
-We press on regardless.As with the limma analysis, the variance will be shrunk towards a global mean rather than one informed by the number of peptides
 
 ```{r, fig.height=5, fig.width=5}
 # Diagnostic plots
@@ -479,7 +448,7 @@ deqms_results %>%
            DEqMS_sig=sca.adj.pval<0.01) %>%
   tally()
 ```
-We can compare the results of limma and DEqMS by considering the p-values. Note that here, they are very well correlated. This is because the methods failed to identify a strong trend between the mean abundance (limma) or number of peptides (DEqMS) and the variance. Thus, both shrunk the variance towards a global mean and similarly increased the effective degrees of freedom.
+We can compare the results of limma and DEqMS by considering the p-values. 
 ```{r}
 
 deqms_results %>%
@@ -492,6 +461,32 @@ deqms_results %>%
   scale_x_log10() +
   scale_y_log10()
 ```
+> ### Discussion 3
+> The p-values from limma and DEqMS are very well correlated. This is despite
+> the two methods using a different depedent variable to shrink the variance 
+> (limma = mean expression, DEqMS = the number of PSMs)
+>
+
+> Solution
+
+```{r class.source = 'fold-hide', eval=FALSE}
+
+# This suggests that the dependent variables are likely to be highly correlated,
+# which makes sense since we are using sum summarisation from PSM -> protein,
+# so proteins with more PSMs will likely have a higher abundance.
+# We can check this like so
+
+deqms_results %>%
+  ggplot() +
+  aes(Hmisc::cut2(count, g=20), AveExpr) +
+  geom_boxplot() +
+  theme_camprot(border=FALSE) +
+  labs(x='PSMs', y='Average abundance') +
+  theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1))
+```
+> Solution end
+
+
 
 Finally, at this point we can save any one of the `data.frames` containing the statistical test results, either to a compressed format (`rds`) to read back into a later R notebook, or a flatfile  (`.tsv`) to read with e.g excel.
 ```{r, eval=FALSE}
