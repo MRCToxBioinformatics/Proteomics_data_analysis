@@ -1,5 +1,14 @@
-To remove the Rmd and html files in the repository, use the following command line:
-
-$ for file in Markdowns/*Rmd; do  sed -i.bak '' -n -e '/> Solution/,/> Solution end/!p' $file; Rscript -e "rmarkdown::render('$file')"; done
 
 For now, the simplest approach is probably to just delete, re-create, edit and push the workshop branch as needed
+
+
+
+git push -d https://github.com/MRCToxBioinformatics/Proteomics_data_analysis  workshop
+git branch -d workshop
+git checkout workshop
+for file in Markdowns/*Rmd; do  sed -i '' -n -e '/> Solution/,/> Solution end/!p' $file; done
+git add Markdowns/*Rmd
+setopt +o nomatch
+git remove Markdowns/*html
+git commit -m 'removes solutions and notebook html'
+git push --set-upstream origin workshop
