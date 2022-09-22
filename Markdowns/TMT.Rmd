@@ -139,32 +139,6 @@ Now that we have inspected the PSM-level quantification and filtered the PSMs, w
 > - What downsides do you perceive in this approach?
 
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-# PSM to protein-level summarisation is much less problematic for TMT quantification
-# and many approaches are valid.
-#
-# In most cases, there are few missing values and summarisation by naive methods
-# such as mean/median/sum is adequate
-#
-# - Mean/sum is is sensitive to outliers
-# - Median is less sensitive to outliers, but sensitive to the intensities
-# of PSMs around the median intensity.
-# 
-# PSM-level intensities can be across orders of magnitude, with the most intense
-# likely to be the most accurate. Mean/sum summarisation is largely drive by a 
-# subset of high intensity PSMs. Sum has a subtle added advantage that the it
-# is also higher for proteins with more PSMs. This can be useful in the downstream
-# statistical analysis, as shall see. Sum is a sensible default
-# summarisation for TMT data
-#
-# In the (rare) cases where there are a lot of missing values, the 'robust'
-# summarisation approach in MSnbase::combineFeatures() may be appropriate
-# (following log-transformation) since this handles missing data appropriately
-
-```
-> Solution end
 
 
 For PSM to protein summarisation, we will use naive 'sum' summarisation (`MSnbase::combineFeatures(method = 'sum')`). This approach does not appropriately handle missing values, since it either returns NA if any value is missing, or, with `na.rm=TRUE` included, replaces NA with zero where there is at least one finite quantification value for a protein. As such, we will remove the few PSMs with any missing values

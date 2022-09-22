@@ -121,27 +121,6 @@ compare_protein_abundances <- rbind(
 > column for each method
 
 
-> Solution
-
-```{r class.source = 'fold-hide', echo=FALSE}
-# Plot direct comparison
-compare_protein_abundances %>%
-  
-  # pivot to wider form for plotting
-  pivot_wider(names_from = method, values_from = abundance) %>% 
-  filter(is.finite(Robust), is.finite(MaxLFQ)) %>%
-  ggplot(aes(x = Robust, y = MaxLFQ)) +
-  geom_point(alpha = 0.25, size = 0.5) +
-  theme_camprot(border = FALSE, base_family = 'sans', base_size = 15) +
-  geom_abline(slope = 1, colour = get_cat_palette(2)[2], linetype = 2, size = 1)
-
-compare_protein_abundances %>%
-  pivot_wider(names_from = method, values_from = abundance) %>% 
-  filter(is.finite(Robust), is.finite(MaxLFQ)) %>%
-  select(Robust, MaxLFQ) %>%
-  cor()
-```
-> Solution end
 
 
 There is a very good overall correlation. Let's inspect a few proteins with the largest differences between the two approaches to see what's going on for the edge cases.

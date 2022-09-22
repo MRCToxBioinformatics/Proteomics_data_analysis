@@ -232,13 +232,6 @@ limma::plotSA(limma_fit)
 > How would you interpret the plot above?
 >
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-# Surprisingly, there's no clear relationship between protein abundance and variance
-
-```
-> Solution end
 
 Despite the lack of a strong relationship between protein abundance and variance,
 we will continue with limma regardless, since it will still increase the effective
@@ -276,15 +269,6 @@ limma_results %>%
 > absolute protein abundances?
 > 3. Does your answer to question 2 affect your expectation in question 1?
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-# 1. We are starting from a single OOPS interface and adding +/- RNase, then recollecting the interface. RBPs should be depleted, but there is no way for any protein to be enriched by this process. Thus, we wouldn't expect proteins with a positive RNase +/- ratio!
-# 2. The protein abundances are relative to the total amount of protein in each sample. Thus, the fold changes are relative to the overall fold-change in the amount of protein in each sample. For example, if there is a global loss of protein in RNase + samples, a positive RNase +/- ratio only represents a increase relative to the global loss, and could be a negative RNase +/- ratio in absolute terms!
-# 3. We are seeing positive RNase +/- ratios because there is a global difference in the amount of protein and we are using a relative protein abundance quantification approach.
-
-```
-> Solution end
 
 We can now compare the results from the t-test and the moderated t-test (limma).
 Below, we update the column names so it's easier to see which column comes from which test and then merge the two test results.
@@ -307,20 +291,6 @@ lfq_compare_tests <- merge(
 > - For the moderated t-test, you can use the 'limma.logFC' column
 
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-ggplot(lfq_compare_tests) +
-  aes(t.test.estimate, limma.logFC) +
-  geom_point() +
-  geom_abline(slope=1) +
-  theme_camprot(border=FALSE) +
-  labs(x='t-test logFC', y='limma logFC')
-
-# The logFC are the same! Remember that limma is not changing the underlying data,
-# just moderating the test statistics.
-```
-> Solution end
 
 We can also compare the p-values from the two tests. Note that the p-value is almost
 always lower for the moderated t-test with `limma` than the standard t-test.

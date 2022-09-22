@@ -161,15 +161,6 @@ hist(t.test.res.all$p.value, 20)
 > What would you conclude from the p-value distribution above?
 >
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-# Here, we have so many significant tests that the uniform distribution is hard to assess!
-# Note that, beyond the clear peak for very low p-values (<0.05), we also have a
-# slight skew towards low p-values in the range 0.05-0.15.
-# This may indicate insufficient statistical power to detect some proteins that are truly enriched upon CL.
-```
-> Solution end
 
 Since we have performed multiple tests, we want to calculate an adjusted p-value
 to avoid type I errors (false positives).
@@ -205,15 +196,6 @@ t.test.res.all %>%
 > relative abundances in each sample, how would you expect the above volcano plot
 > to look?
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-# It would like be much more symetrical, since the trend towards increased abundance
-# in CL would be masked by the comparison of the relative abundances in CL and NC.
-# Protein which are highly enriched with CL would have reduced ratios and those with more slight
-# enrichments may even appear to be relatively depleted!
-```
-> Solution end
 
 
 ### Moderated t-test (DEqMS)
@@ -341,19 +323,6 @@ silac_compare_tests <- merge(deqms_results,
 > - For the moderated t-test, you want the 'deqms.logFC' column
 
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-ggplot(silac_compare_tests) +
-  aes(t.test.estimate, deqms.logFC) +
-  geom_point() +
-  geom_abline(slope=1) +
-  theme_camprot(border=FALSE) +
-  labs(x='t.test mean ratio', y='DEqMS mean ratio')
-
-# The ratios are the same. DEqMS (and limma) are moderating the test statistics, but not the estimated fold-change.
-```
-> Solution end
 
 
 We can also compare the p-values from the two tests. Note that the p-value is almost
@@ -407,38 +376,6 @@ write.csv(silac_compare_tests, 'filename_to_save_to.tsv', sep='\t', row.names=FA
 >   to bin this into reasonable bins. See e.g ?Hmisc::cut2 for this.
 
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-
-# Start by tallying as in code chunk above
-silac_compare_tests %>%
-  group_by('min_peptides'=Hmisc::cut2(deqms.count, cuts=c(1:4,10)),
-           't-test'=t.test.padj<0.01,
-           'deqms'=deqms.sca.adj.pval<0.01) %>%
-  tally() %>%
-
-  # make a single column describing yes/no significant with each method and
-  # rename to make it more intuitive
-  mutate(compare_tests=recode(interaction(`t-test`, deqms),
-                              'FALSE.FALSE'='Neither',
-                              'TRUE.TRUE'='Both',
-                              'TRUE.FALSE'='t-test',
-                              'FALSE.TRUE'='DEqMS')) %>%
-  mutate(compare_tests=factor(compare_tests, levels=c('t-test', 'DEqMS', 'Both', 'Neither'))) %>%
-
-  ggplot(aes(min_peptides, n, fill=compare_tests)) +
-  geom_bar(stat='identity',position='fill') +
-  geom_text(position=position_fill(vjust=0.5), aes(label=n)) +
-  theme_camprot(border=FALSE, base_size=15) +
-  scale_fill_manual(values=c(get_cat_palette(3), 'grey'), name='') +
-  labs(x='Minimum peptides per sample', y='Fraction of proteins')
-
-# Note that the 3 proteins which are only significant with the t-test have a
-# minimum of 1/2 peptides per sample. These are likely to be poorly quantified
-# and falsely identified as CL-enriched.
-```
-> Solution end
 
 ## References {.unlisted .unnumbered}
 

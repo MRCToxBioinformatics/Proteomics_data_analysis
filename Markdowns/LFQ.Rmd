@@ -80,12 +80,6 @@ str(pep_data)
 > How do the numerical values in the Abundance.F*.Sample columns relate
 > to the conditions (RNase +/-)?
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE}
-# It's not possible to tell!
-```
-> Solution end
 
 ---
 
@@ -209,12 +203,6 @@ First of all, we want to inspect the peptide intensity distributions.
 > - You can access the assay data using `exprs(pep)`
 > - You will need to log-transform the abundances to make them interpretable
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE}
-log(pep, base=2) %>% exprs() %>% boxplot()
-```
-> Solution end
 
 ---
 
@@ -268,16 +256,6 @@ print(p)
 > calling `is.na(exprs(obj))`
 
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-
-sum(is.na(pep)) #1
-mean(is.na(pep)) #2
-colSums(is.na(pep)) #3
-sum(rowSums(is.na(pep))==0) #4
-```
-> Solution end
 
 ---
 
@@ -319,13 +297,6 @@ We don't have internal benchmark proteins we can normalise against, so we will o
 >
 > What technical explanations can you think of which would explain the differences in intensity?
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE}
-# 1. Incorrect total peptide quantification leading to under/over-injection of peptides
-# 2. Differences between separate MS runs (especially when lots of samples are being processed)
-```
-> Solution end
 
 ---
 

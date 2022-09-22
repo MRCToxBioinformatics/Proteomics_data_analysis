@@ -169,16 +169,6 @@ hist(t.test.res.all$p.value, 20)
 > What would you conclude from the p-value distribution above?
 >
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE, fig.show='hide'}
-# Here, we have so many significant tests that the uniform distribution is hard to assess!
-# Note that, beyond the clear peak for very low p-values (<0.05), we also have a
-# slight skew towards low p-values in the range 0.05-0.2.
-# This may indicate insufficient statistical power to detect some proteins that
-# are truly differentially abundant.
-```
-> Solution end
 
 
 Since we have performed multiple tests, we want to calculate an adjusted p-value
@@ -233,13 +223,6 @@ limma::plotSA(limma_fit)
 > How would you interpret the plot above?
 >
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-# There's a really clear relationship between protein abundance and variance!
-
-```
-> Solution end
 
 In this case, the variances will be shrunk towards a value that depends on the
 mean protein abundance vs variance trend
@@ -277,15 +260,6 @@ limma_results[example_protein,]
 > Given the experimental design, would you expect proteins to have signficant
 > changes in both directions?
 
-> Solution
-
-```{r class.source = 'fold-hide'}
-# Yes! We are mixing known quantities of human and yeast proteins together such
-# that yeast proteins increase 2-fold in abundance between 2x and 1x samples, and human
-# proteins decrease in abundance (to balance out the total amount of protein in the samples)
-
-```
-> Solution end
 
 
 It would make more sense to split the volcano plot by the species from which the protein derived.
@@ -305,21 +279,6 @@ species <-  uniprot_map(
 >
 > Hint: see `?facet_wrap`
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE}
-
-limma_results %>%
-  merge(species, by.x='row.names', by.y='UNIPROTKB') %>%
-  ggplot(aes(x = logFC, y = -log10(adj.P.Val), colour = adj.P.Val < 0.01)) +
-  geom_point(size=0.5) +
-  theme_camprot(border=FALSE, base_size=15) +
-  scale_colour_manual(values = c('grey', get_cat_palette(2)[2]), name = '2x vs 1x Sig.') +
-  labs(x = '2x vs 1x (Log2)', y = '-log10(p-value)') +
-  facet_wrap(~(gsub('\\(.*', '', Organism)))
-
-```
-> Solution end
 
 
 We can now compare the results from the t-test and the moderated t-test (limma).
@@ -467,24 +426,6 @@ deqms_results %>%
 > (limma = mean expression, DEqMS = the number of PSMs)
 >
 
-> Solution
-
-```{r class.source = 'fold-hide', eval=FALSE}
-
-# This suggests that the dependent variables are likely to be highly correlated,
-# which makes sense since we are using sum summarisation from PSM -> protein,
-# so proteins with more PSMs will likely have a higher abundance.
-# We can check this like so
-
-deqms_results %>%
-  ggplot() +
-  aes(Hmisc::cut2(count, g=20), AveExpr) +
-  geom_boxplot() +
-  theme_camprot(border=FALSE) +
-  labs(x='PSMs', y='Average abundance') +
-  theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1))
-```
-> Solution end
 
 
 
