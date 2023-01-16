@@ -1,0 +1,231 @@
+---
+title: "Tandem Mass Tags"
+subtitle: "QC PSM-level quantification and summarisation to protein-level abundance"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+### Preamble
+
+....
+
+```{r, message=FALSE}
+library(camprotR)
+library(MSnbase)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+```
+
+### Input data
+
+We start by reading in a file containing PSM-level output from Proteome Discoverer (PD). This data comes from a published benchmark experiment where yeast peptides were spiked into human peptides at 3 known amounts to provide ground truth fold changes (see below). For more details, see [@http://zotero.org/users/5634351/items/LG3W8G4T]
+
+<img src="https://github.com/CambridgeCentreForProteomics/notch/blob/master/images/toc.png?raw=true" width="70%"/>
+
+The data we will use is available through the `Proteomics.analysis.data` package.
+
+```{r}
+psm_total_data <- read.delim(
+  system.file("extdata", 'benchmark_phosphoTMT', 'benchmark_total_TMT_PSMs.txt.gz',
+              package = "Proteomics.analysis.data"))
+
+psm_phospho_data <- read.delim(
+  system.file("extdata", 'benchmark_phosphoTMT', 'benchmark_phospho_TMT_PSMs.txt.gz',
+              package = "Proteomics.analysis.data"))
+```
+
+The first step is to remove contaminant proteins. These were defined using the cRAP database. Below, we parse the cRAP fasta to extract the IDs for the cRAP proteins, in both 'cRAP' format and Uniprot IDs for these proteins.
+
+```{r}
+crap_fasta_inf <- system.file(
+  "extdata", "cRAP_20190401.fasta.gz", 
+  package = "Proteomics.analysis.data"
+)
+
+# Load the cRAP FASTA used for the PD search
+crap.fasta <- Biostrings::fasta.index(crap_fasta_inf, seqtype = "AA")
+
+# Extract the non cRAP UniProt accessions associated with each cRAP protein
+crap.accessions <- crap.fasta %>% 
+  pull(desc) %>% 
+  stringr::str_extract_all(pattern = "(?<=\\|).*?(?=\\|)") %>% 
+  unlist()
+```
+
+We can then supply these cRAP protein IDs to `parse_features` which will remove features which may originate from contaminants, as well as features which don't have a unique master protein. See `?parse_features` for further details, including the removal of 'associated cRAP'.
+
+```{r}
+psm_total_data_flt <- parse_features(
+  psm_total_data, 
+  crap_proteins = crap.accessions, 
+  TMT = TRUE, 
+  level = 'PSM'
+)
+
+psm_phospho_data_flt <- parse_features(
+  psm_phospho_data, 
+  crap_proteins = crap.accessions, 
+  TMT = TRUE, 
+  level = 'PSM'
+)
+```
+
+To identify the position of the phosphosite, the PhosphoRS[@http://zotero.org/users/5634351/items/TZ6QFFXY] algorithm is used in PD. Below, we filter the phospho-peptide to retain those with high confidence phosphosite localisation (phosphoRS\>75).
+
+```{r}
+psm_phospho_data_parsed <- parse_PTM_scores(
+  psm_phospho_data_flt,
+  ptm_col="PhosphoRS.Best.Site.Probabilities", 
+  threshold=75)
+
+# The filtering doesn't actually take place until this step
+psm_phospho_data_parsed <- psm_phospho_data_parsed %>%
+  filter(filtered_score!="")
+```
+
+Next, we annotate the phosphopeptides with the localisation of the phosphosite with respect to the protein sequence. For this, we need the protein sequences, which we can extract from the fasta. Here, we use a fasta with the combined sequences of the human and yeast proteomes.
+
+```{r}
+protein_fasta_inf <- system.file("extdata", 'benchmark_phosphoTMT', 'human_yeast.fasta.gz',
+                                 package = "Proteomics.analysis.data")
+```
+
+We can then use the `camprotR` function `add_PTM_positions` to add the position information
+
+```{r}
+psm_phospho_data_parsed <- psm_phospho_data_parsed %>% add_PTM_positions(protein_fasta_inf)
+
+```
+
+We can also add the sequence around the phosphosite, which can be useful to e.g identify common motifs around the phosphosites.
+
+```{r}
+psm_phospho_data_parsed <- add_site_sequence(psm_phospho_data_parsed, protein_fasta_inf)
+```
+
+Finally, we need to add the positions of the peptide for the total peptides, so we can intersect the positions of the phosphosite and total peptides for the statistical testing. We can use `add_peptide_positions` for this, though note that this code chunk takes a long time to run.
+
+```{r}
+psm_total_data_flt <- add_peptide_positions(psm_total_data_flt, proteome_fasta=protein_fasta_inf)
+```
+
+We now store the filtered PSM data for total and phospho in MSnSets, the standard data object for proteomics in R. See the `vignette("msnset", package="camprotR")` for more details.
+
+```{r}
+# Abundance columns for TMT PD-output start with Abundance 
+abundance_total_cols <- colnames(psm_total_data_flt)[
+  grepl('Abundance.', colnames(psm_total_data_flt))]
+
+psm.total.e <- as.matrix(psm_total_data_flt[, abundance_total_cols])
+psm.total.f <- psm_total_data_flt[, setdiff(colnames(psm_total_data_flt), abundance_total_cols)]
+
+# update the column names to remove the 'Abundance.` prefix
+colnames(psm.total.e) <- gsub('Abundance.', '', colnames(psm.total.e))
+
+# we don't have 'phenotype' data to add so we just define the 
+# 'expression' data and 'feature' data
+
+psm.total.p <- data.frame(spike=rep(factor(c('x1', 'x2', 'x6')), c(4,3,3)), row.names=colnames(psm.total.e))
+  
+psm.total <- MSnbase::MSnSet(exprs = psm.total.e, fData = psm.total.f, pData=psm.total.p)
+```
+
+```{r}
+# Abundance columns for TMT PD-output start with Abundance 
+abundance_phospho_cols <- colnames(psm_phospho_data_parsed)[
+  grepl('Abundance.', colnames(psm_phospho_data_parsed))]
+
+psm.phospho.e <- as.matrix(psm_phospho_data_parsed[, abundance_phospho_cols])
+psm.phospho.f <- psm_phospho_data_parsed[, setdiff(colnames(psm_phospho_data_parsed), abundance_phospho_cols)]
+
+# update the column names to remove the 'Abundance.` prefix
+colnames(psm.phospho.e) <- gsub('Abundance.', '', colnames(psm.phospho.e))
+
+# we don't have 'phenotype' data to add so we just define the 
+# 'expression' data and 'feature' data
+
+psm.phospho.p <- data.frame(spike=rep(factor(c('x1', 'x6')), c(4,6)), row.names=colnames(psm.phospho.e))
+  
+psm.phospho <- MSnbase::MSnSet(exprs = psm.phospho.e, fData = psm.phospho.f, pData=psm.phospho.p)
+```
+
+```{r}
+psm_res <- list('Total'=psm.total, 'Phospho'=psm.phospho)
+```
+
+```{r}
+for(x in names(psm_res)){
+  
+  p <- psm_res[[x]] %>% log(base=2) %>% plot_quant() +
+      ggtitle(x) +
+      ylab('PSM intensity (log2)')
+  
+  print(p)
+    
+  p <- psm_res[[x]] %>% log(base=2) %>% plot_quant(method='density') +
+      xlab('PSM intensity (log2)') +
+      ggtitle(x)
+  
+  print(p)
+  
+}
+```
+
+Note that where the signal:noise > 10, there are far fewer missing values.
+```{r}
+for(x in psm_res){
+  plotNA(x)
+}
+```
+
+```{r, fig.height=5, fig.width=7, fig.fullwidth=TRUE, fig.cap="Missing values per PSM, in relation to the signal:noise ratio"}
+for(x in names(psm_res)){
+  
+    p <- psm_res[[x]] %>% plot_missing_SN(bins=50) +
+      ggtitle(x)
+    print(p)
+
+}
+```
+
+We can also look into this relationship at the tag level using `plot_missing_SN_per_sample`. In this case, there is no tag which appears to have a high proportion of missing values when signal:noise \> 5. If there were, this may warrant further exploration, e.g was one of the sample preparations inadequate such that fewer peptides were labeled?
+
+```{r}
+for(x in names(psm_res)){
+  
+
+    p <- psm_res[[x]] %>% plot_missing_SN_per_sample(bins=50) +
+      ggtitle(x)
+    print(p)
+}
+
+
+```
+
+Based on the above, we will filter the PSMs to only retain those with S:N > 10 using `filter_TMT_PSMs`. Using the same function, we will also remove PSMs with interference/co-isolation >50%.
+
+```{r}
+psm_filt_sn_int <- psm_res %>% lapply(function(x){
+  filter_TMT_PSMs(x, inter_thresh = 50, sn_thresh = 5)})
+```
+
+  
+
+We save the object to disk so we can read it back into memory when we need it
+
+```{r, eval=FALSE}
+saveRDS(psm_filt_sn_int, './results/benchmark_tmt_phospho_psm_filt.rds')
+```

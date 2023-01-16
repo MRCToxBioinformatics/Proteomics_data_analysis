@@ -734,44 +734,56 @@
 		}
 	},
 	{
-		"id": "http://zotero.org/users/5634351/items/YY5VWWY7",
+		"id": "http://zotero.org/users/5634351/items/TZ6QFFXY",
 		"type": "article-journal",
-		"abstract": "MOTIVATION: When running experiments that involve multiple high density oligonucleotide arrays, it is important to remove sources of variation between arrays of non-biological origin. Normalization is a process for reducing this variation. It is common to see non-linear relations between arrays and the standard normalization provided by Affymetrix does not perform well in these situations.\nRESULTS: We present three methods of performing normalization at the probe intensity level. These methods are called complete data methods because they make use of data from all arrays in an experiment to form the normalizing relation. These algorithms are compared to two methods that make use of a baseline array: a one number scaling based algorithm and a method that uses a non-linear normalizing relation by comparing the variability and bias of an expression measure. Two publicly available datasets are used to carry out the comparisons. The simplest and quickest complete data method is found to perform favorably.\nAVAILABILITY: Software implementing all three of the complete data normalization methods is available as part of the R package Affy, which is a part of the Bioconductor project http://www.bioconductor.org.\nSUPPLEMENTARY INFORMATION: Additional figures may be found at http://www.stat.berkeley.edu/~bolstad/normalize/index.html",
-		"container-title": "Bioinformatics (Oxford, England)",
-		"DOI": "10.1093/bioinformatics/19.2.185",
-		"ISSN": "1367-4803",
-		"issue": "2",
-		"journalAbbreviation": "Bioinformatics",
+		"abstract": "An algorithm for the assignment of phosphorylation sites in peptides is described. The program uses tandem mass spectrometry data in conjunction with the respective peptide sequences to calculate site probabilities for all potential phosphorylation sites. Tandem mass spectra from synthetic phosphopeptides were used for optimization of the scoring parameters employing all commonly used fragmentation techniques. Calculation of probabilities was adapted to the different fragmentation methods and to the maximum mass deviation of the analysis. The software includes a novel approach to peak extraction, required for matching experimental data to the theoretical values of all isoforms, by defining individual peak depths for the different regions of the tandem mass spectrum. Mixtures of synthetic phosphopeptides were used to validate the program by calculation of its false localization rate versus site probability cutoff characteristic. Notably, the empirical obtained precision was higher than indicated by the applied probability cutoff. In addition, the performance of the algorithm was compared to existing approaches to site localization such as Ascore. In order to assess the practical applicability of the algorithm to large data sets, phosphopeptides from a biological sample were analyzed, localizing more than 3000 nonredundant phosphorylation sites. Finally, the results obtained for the different fragmentation methods and localization tools were compared and discussed.",
+		"container-title": "Journal of Proteome Research",
+		"DOI": "10.1021/pr200611n",
+		"ISSN": "1535-3907",
+		"issue": "12",
+		"journalAbbreviation": "J Proteome Res",
 		"language": "eng",
-		"note": "PMID: 12538238",
-		"page": "185-193",
+		"note": "PMID: 22073976",
+		"page": "5354-5362",
 		"source": "PubMed",
-		"title": "A comparison of normalization methods for high density oligonucleotide array data based on variance and bias",
-		"volume": "19",
+		"title": "Universal and confident phosphorylation site localization using phosphoRS",
+		"volume": "10",
 		"author": [
 			{
-				"family": "Bolstad",
-				"given": "B. M."
+				"family": "Taus",
+				"given": "Thomas"
 			},
 			{
-				"family": "Irizarry",
-				"given": "R. A."
+				"family": "Köcher",
+				"given": "Thomas"
 			},
 			{
-				"family": "Astrand",
-				"given": "M."
+				"family": "Pichler",
+				"given": "Peter"
 			},
 			{
-				"family": "Speed",
-				"given": "T. P."
+				"family": "Paschke",
+				"given": "Carmen"
+			},
+			{
+				"family": "Schmidt",
+				"given": "Andreas"
+			},
+			{
+				"family": "Henrich",
+				"given": "Christoph"
+			},
+			{
+				"family": "Mechtler",
+				"given": "Karl"
 			}
 		],
 		"issued": {
 			"date-parts": [
 				[
-					"2003",
-					1,
-					22
+					"2011",
+					12,
+					2
 				]
 			]
 		}
