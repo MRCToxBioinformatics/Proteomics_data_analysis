@@ -27,6 +27,7 @@ library(MSnbase)
 library(ggplot2)
 library(tidyr)
 library(dplyr)
+library(here)
 ```
 
 ### Input data
@@ -83,7 +84,7 @@ psm_phospho_data_flt <- parse_features(
 )
 ```
 
-To identify the position of the phosphosite, the PhosphoRS[@http://zotero.org/users/5634351/items/TZ6QFFXY] algorithm is used in PD. Below, we filter the phospho-peptide to retain those with high confidence phosphosite localisation (phosphoRS\>75).
+To identify the position of the phosphosite, the PhosphoRS[@http://zotero.org/users/5634351/items/TZ6QFFXY] algorithm is used in PD. Below, we filter the phospho-peptide to retain those with confident phosphosite localisation (phosphoRS\>75). Note that you may wish to use a higher threshold 
 
 ```{r}
 psm_phospho_data_parsed <- parse_PTM_scores(
@@ -222,10 +223,28 @@ psm_filt_sn_int <- psm_res %>% lapply(function(x){
   filter_TMT_PSMs(x, inter_thresh = 50, sn_thresh = 5)})
 ```
 
-  
+```{r}
+phospho_sites <- psm_filt_sn_int$Phospho %>%
+    MSnbase::combineFeatures(
+      groupBy = paste(fData(psm_filt_sn_int$Phospho)$Master.Protein.Accessions,
+                      fData(psm_filt_sn_int$Phospho)$ptm_position, sep='_'),
+      method = 'sum')
+
+```
+
+```{r}
+total <- psm_filt_sn_int$Total %>%
+    MSnbase::combineFeatures(
+      groupBy = fData(psm_filt_sn_int$Total)$Sequence,
+      method = 'sum')
+```
+
 
 We save the object to disk so we can read it back into memory when we need it
 
 ```{r, eval=FALSE}
-saveRDS(psm_filt_sn_int, './results/benchmark_tmt_phospho_psm_filt.rds')
+saveRDS(psm_filt_sn_int, here('results/benchmark_tmt_phospho_psm_filt.rds'))
+saveRDS(total, here('results/total.rds'))
+saveRDS(phospho_sites, here('results/phospho_sites.rds'))
+
 ```
