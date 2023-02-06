@@ -1,6 +1,6 @@
 ---
-title: "Tandem Mass Tags"
-subtitle: "QC PSM-level quantification and summarisation to protein-level abundance"
+title: "Phosphoproteomics using Tandem Mass Tags"
+subtitle: "QC PSM-level quantification, filtering and summarisation to protein-level abundance"
 author: "Tom Smith"
 date: "`r Sys.Date()`"
 output:
@@ -10,7 +10,7 @@ output:
 bibliography: bib.json
 ---
 
-```{r setup, include = FALSE}
+```{r, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -19,7 +19,6 @@ knitr::opts_chunk$set(
 
 ### Preamble
 
-....
 
 ```{r, message=FALSE}
 library(camprotR)
@@ -117,7 +116,7 @@ We can also add the sequence around the phosphosite, which can be useful to e.g 
 psm_phospho_data_parsed <- add_site_sequence(psm_phospho_data_parsed, protein_fasta_inf)
 ```
 
-Finally, we need to add the positions of the peptide for the total peptides, so we can intersect the positions of the phosphosite and total peptides for the statistical testing. We can use `add_peptide_positions` for this, though note that this code chunk takes a long time to run.
+Finally, we need to add the positions of the peptide for the total peptides, so we can intersect the positions of the phosphosite and total peptides for the statistical testing. We can use `add_peptide_positions` for this, though note that this code chunk takes a long time to run (the function needs to be optimised).
 
 ```{r}
 psm_total_data_flt <- add_peptide_positions(psm_total_data_flt, proteome_fasta=protein_fasta_inf)
@@ -139,9 +138,12 @@ colnames(psm.total.e) <- gsub('Abundance.', '', colnames(psm.total.e))
 # we don't have 'phenotype' data to add so we just define the 
 # 'expression' data and 'feature' data
 
-psm.total.p <- data.frame(spike=rep(factor(c('x1', 'x2', 'x6')), c(4,3,3)), row.names=colnames(psm.total.e))
+psm.total.p <- data.frame(spike=rep(factor(c('x1', 'x2', 'x6')), c(4,3,3)),
+                          condition=rep(1:3, c(4,3,3)),
+                          row.names=colnames(psm.total.e))
   
 psm.total <- MSnbase::MSnSet(exprs = psm.total.e, fData = psm.total.f, pData=psm.total.p)
+pData(psm.total)
 ```
 
 ```{r}
@@ -158,9 +160,12 @@ colnames(psm.phospho.e) <- gsub('Abundance.', '', colnames(psm.phospho.e))
 # we don't have 'phenotype' data to add so we just define the 
 # 'expression' data and 'feature' data
 
-psm.phospho.p <- data.frame(spike=rep(factor(c('x1', 'x6')), c(4,6)), row.names=colnames(psm.phospho.e))
+psm.phospho.p <- data.frame(spike=rep(factor(c('x1', 'x6')), c(4,6)),
+                            condition=rep(1:3, c(4,3,3)),
+                            row.names=colnames(psm.phospho.e))
   
 psm.phospho <- MSnbase::MSnSet(exprs = psm.phospho.e, fData = psm.phospho.f, pData=psm.phospho.p)
+
 ```
 
 ```{r}
@@ -202,7 +207,7 @@ for(x in names(psm_res)){
 }
 ```
 
-We can also look into this relationship at the tag level using `plot_missing_SN_per_sample`. In this case, there is no tag which appears to have a high proportion of missing values when signal:noise \> 5. If there were, this may warrant further exploration, e.g was one of the sample preparations inadequate such that fewer peptides were labeled?
+We can also look into this relationship at the tag level using `plot_missing_SN_per_sample`. In this case, there is no tag which appears to have a high proportion of missing values when signal:noise > 5. If there were, this may warrant further exploration, e.g was one of the sample preparations inadequate such that fewer peptides were labeled?
 
 ```{r}
 for(x in names(psm_res)){
@@ -216,26 +221,53 @@ for(x in names(psm_res)){
 
 ```
 
-Based on the above, we will filter the PSMs to only retain those with S:N > 10 using `filter_TMT_PSMs`. Using the same function, we will also remove PSMs with interference/co-isolation >50%.
+Based on the above, we will filter the PSMs to only retain those with S:N > 10 using `filter_TMT_PSMs`. Using the same function, we will also remove PSMs with interference/co-isolation >10%.
 
 ```{r}
 psm_filt_sn_int <- psm_res %>% lapply(function(x){
-  filter_TMT_PSMs(x, inter_thresh = 50, sn_thresh = 5)})
+  filter_TMT_PSMs(x, inter_thresh = 10, sn_thresh = 5)})
+```
+Since we have merged together material from two species, we will perform a couple more 
+
+Finally, we will also filter our PSMs using the Delta.Score, e.g the difference between the score for the top two hits. Where this is 
+```{r}
+
+psm_filt_sn_int_delta <- psm_filt_sn_int %>% lapply(function(x){
+  flt <- x[fData(x)$Delta.Score>0.2,]
+  camprotR:::message_parse(fData(flt), column='Master.Protein.Accessions', message='Delta Score filtering')
+  return(flt)
+})
+
+
 ```
 
+
+For a typical phospho TMT proteomics experiment, it would likely be reasonable to use a more relaxed filter for the interference (e.g 50%) and to not filter by Delta Score at all.
+
 ```{r}
-phospho_sites <- psm_filt_sn_int$Phospho %>%
+phospho_sites <- psm_filt_sn_int_delta$Phospho %>%
     MSnbase::combineFeatures(
-      groupBy = paste(fData(psm_filt_sn_int$Phospho)$Master.Protein.Accessions,
-                      fData(psm_filt_sn_int$Phospho)$ptm_position, sep='_'),
+      groupBy = paste(fData(psm_filt_sn_int_delta$Phospho)$Master.Protein.Accessions,
+                      fData(psm_filt_sn_int_delta$Phospho)$ptm_position, sep='_'),
       method = 'sum')
 
+
+print(nrow(phospho_sites))
 ```
 
+Note that our filtering has removed a lot of PSMs, especially for the phosphosites. We've gone from:
+- 5582 PSMs in the input file
+- 5335 PSMs after removing contaminants and PSMs without a unique master protein
+- 4301 PSMs after removing those without a phosphorylation site
+- 2852 PSMs after removing those with a phosphoRS score < 75
+- 1524 PSMs after removing those with interference > 10 or Signal:Noise < 10
+- 1008 PSMs after removing those with Delta Score < 0.2.
+- 666 phosphosites after combining PSMs for the same phosphosite
+
 ```{r}
-total <- psm_filt_sn_int$Total %>%
+total <- psm_filt_sn_int_delta$Total %>%
     MSnbase::combineFeatures(
-      groupBy = fData(psm_filt_sn_int$Total)$Sequence,
+      groupBy = fData(psm_filt_sn_int_delta$Total)$Sequence,
       method = 'sum')
 ```
 
