@@ -1,0 +1,207 @@
+---
+title: "Phosphoproteomics using Tandem Mass Tags"
+subtitle: "Intersecting phosphosites and total peptides and statistical testing"
+author: "Tom Smith"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+bibliography: bib.json
+---
+
+### Load dependencies
+
+Load the required libraries.
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+library(camprotR)
+library(MSnbase)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(here)
+library(limma)
+library(uniprotREST)
+```
+
+
+### Preamble
+
+The correct approach for statistical testing for changes in phosphorylation will depend on the details of the experimental design. Here, we have quantified phospho and unmodified peptides, so we can identify changes in phosphorylation which are not explained by changes in the unmodified protein, e.g changes in the proportion of the protein that is phosphorylated. 
+
+To acheive this, we will jointly model the phospho and unmodified peptides which overlap each phosphosite, using a linear model with an interaction term.
+
+### Input data
+
+We start by reading in the MSnSets created in the previous notebook [QC PSM-level quantification, filtering and summarisation to protein-level abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT_phospho.html)
+
+```{r}
+total <- readRDS(here('results/total.rds'))
+phospho_sites <- readRDS(here('results/phospho_sites.rds'))
+```
+
+
+Below, we identify the total peptides that overlap each phosphosite. Note that each phosphosite may intersect multiple total peptides (due to missed cleavages) and each total peptide may intersect multiple phosphosites (due to multiple phosphosites per peptide).
+```{r}
+phospho_f <- phospho_sites %>% fData() %>% tibble::rownames_to_column('ID')
+total_f <- total %>% fData() %>% tibble::rownames_to_column('ID')
+
+phospho_peptide_to_total_peptides <- vector('list', length=length(phospho_f$ID))
+names(phospho_peptide_to_total_peptides) <- phospho_f$ID
+n <- 0
+for(phospho_id in phospho_f$ID){
+  row <- phospho_f %>% filter(ID==phospho_id)
+  
+  n <- n + 1
+  ptm_positions <- as.numeric(strsplit(row$ptm_position, split='\\|')[[1]])
+  
+  total_peptide_ids <- total_f %>%
+    filter(Master.Protein.Accessions %in% row$Master.Protein.Accessions,
+           peptide_start<=min(ptm_positions),
+           peptide_end>=max(ptm_positions)) %>%
+    pull(ID)  
+  
+  phospho_peptide_to_total_peptides[[row$ID]] <- total_peptide_ids
+}
+
+```
+
+Now, how many overlapping features. Note that for the phospho and total to be considered intersecting, there must be at least one total peptide which overlaps the phosphosite. Out of the `r length(phospho_f$ID)` phosphosites, only `r sum(sapply(phospho_peptide_to_total_peptides, function(x) length(x)>0))` have at least one overlapping total peptide.
+```{r}
+print(length(phospho_f$ID))
+print(table(sapply(phospho_peptide_to_total_peptides, function(x) length(x)>0)))
+print(table(sapply(phospho_peptide_to_total_peptides, length)))
+```
+limma requires a single row per feature with a columns per sample. Here, the phospho and total are separate samples so we need to combine them into a single row.
+```{r}
+combined_exprs <- phospho_peptide_to_total_peptides %>% names() %>% lapply(function(x){
+  total_peptides <- phospho_peptide_to_total_peptides[[x]]
+  
+  if(length(total_peptides)>0) {
+    exprs_values <- c(exprs(phospho_sites[x,]),
+                      colSums(exprs(total[total_peptides,]), na.rm=TRUE))
+    exprs_values <- unname(exprs_values)
+    return(exprs_values)
+  } else { return(NULL) }
+})
+names(combined_exprs) <- names(phospho_peptide_to_total_peptides)
+```
+
+Create the completed matrix of phospho and total.
+```{r}
+
+combined_exprs <- combined_exprs[sapply(combined_exprs, function(x) !is.null(x))]
+all_combined_exprs <- bind_rows(combined_exprs) %>% t() %>% as.matrix
+
+rownames(all_combined_exprs) <- names(combined_exprs)
+
+colnames(all_combined_exprs) <- c(paste0(colnames(phospho_sites), '_phospho'),
+                                  paste0(colnames(total), '_total'))
+
+```
+
+Inspect the combined quantification matrix. 
+```{r}
+head(all_combined_exprs) #
+```
+
+```{r}
+all_combined_fdata <- fData(phospho_sites[rownames(all_combined_exprs),])[
+  ,c('Master.Protein.Accessions', 'ptm_position')]
+all_combined_fdata$n_total <- sapply(rownames(all_combined_exprs),
+                                     function(x) length(phospho_peptide_to_total_peptides[[x]]))
+
+all_combined_pdata <- rbind((pData(phospho_sites) %>% mutate(type='phospho')),
+                            (pData(total) %>% mutate(type='total')))
+rownames(all_combined_pdata) <- colnames(all_combined_exprs)
+all_combined_res <- MSnSet(as.matrix.data.frame(all_combined_exprs),
+                           all_combined_fdata,
+                           all_combined_pdata)
+
+head(fData(all_combined_res))
+pData(all_combined_res)
+```
+
+Below, we subset to the first 2 'conditions', where condition 1 = tags 1-4 (x1 phospho; x1 total) and condition 2 = tags 5-7 (x6 phospho; x2 total). 
+The ground truth for the difference between condition 2 and condition 1 is therefore a 3-fold increase in phosphorylation for the yeast proteins and reduced phosphorylation for the human proteins. For the human proteins, given the amounts of spike in yeast and balancing human proteins to make up the labelled material, we expect a 30% drop in phosphorylation.
+```{r}
+pairwise_comparison_combined_res <- all_combined_res[,pData(all_combined_res)$condition %in% 1:2]
+pData(pairwise_comparison_combined_res)
+```
+
+### Run limma
+
+
+Below, we perform the limma analysis. First though, some clarification on the model we're using.
+
+We have two experimental variables:
+- type: phospho or total
+- condition: 1x or 2x spike in
+
+```{r}
+type <- factor(pData(pairwise_comparison_combined_res)$type, level=c('total', 'phospho'))
+condition <- factor(pData(pairwise_comparison_combined_res)$condition, levels=1:2)
+print(paste(type, condition))
+```
+
+When we use an model with the terms type, condition and type:condition, the interaction term captures the difference between the observed data and the simple additive model when the abundance is dependent upon just the separate effect of the type and condition variables and there is no combinatorial effect.
+```{r}
+# model without interaction term
+print(model.matrix(~type+condition))
+
+# model with an interaction term
+print(model.matrix(~type+condition+type:condition))
+
+```
+
+Below, we run the linear modeling. For more details about `limma`, see the
+[Differential abundance testing for TMT proteomics]('~/git_repos/bioinf_training/Proteomics.data.analysis/Markdowns/Stats_diff_abundance_TMT.Rmd') notebook. 
+
+```{r}
+dat <- exprs(pairwise_comparison_combined_res) %>% log(base=2)
+study.design <- model.matrix(~type*condition)
+
+fit <- lmFit(dat, study.design)
+fit <- eBayes(fit, trend=TRUE)
+
+limma.results <- topTable(fit, coef = colnames(fit$coefficients)[4], n = Inf, confint=TRUE)
+limma.results$sigma <- fit$sigma
+
+```
+
+
+We would like to add information about the species to make sure the fold-changes are in the expected direction. We'll use the `uniprotREST` package to query 
+```{r}
+limma.results$protein <- rownames(limma.results) %>%
+  strsplit(split='_') %>%
+  sapply('[[', 1) 
+
+species_res <-  uniprot_map(
+  ids = unique(limma.results$protein),
+  from = "UniProtKB_AC-ID",
+  to = "UniProtKB",
+  fields = "organism_name") %>%
+  mutate(species=recode(Organism,
+                        "Saccharomyces cerevisiae (strain ATCC 204508 / S288c) (Baker's yeast)"="S.cerevisiae",
+                        "Homo sapiens (Human)"="H.sapiens"))
+```
+Below, we plot the limma results using a volcano plot, with two panels, one for each species.
+
+```{r}
+limma.results %>%
+  merge(species_res, by.x='protein', by.y='From') %>%
+  ggplot(aes(logFC, -log10(P.Value), fill=adj.P.Val<0.01)) +
+  geom_point(pch=21, size=2, colour='grey70') +
+  facet_wrap(~species) +
+  theme_camprot(base_size=15, base_family='sans', border=FALSE) +
+  theme(strip.background=element_blank()) +
+  xlab('Log2 fold change') +
+  ylab('-log10(p-value)') +
+  scale_fill_manual(values=c('grey90', get_cat_palette(2)[2]), name='FDR < 1%')
+```
+
+
+The direction of change is as expected (reduced for human, increased for yeast), but only a subset of the fold-changes reach a 1% FDR threshold for significance. The fold-changes are appoximately what we would expect too: human phosphosites should be reduced by 30% = `r round(log2(0.7), 2)` on a log2 scale and the yeast phosphosites should be increased by 3-fold = `r round(log2(3), 2)` on a log2 scale.
+
+

@@ -75,7 +75,8 @@ obtain the quantification data
 
 Additional subsections are included to cover further topics for each flavour.
 
-
+In addition to the core part of the course, there are extended materials to cover:
+- Phosphoproteomics using Tandem Mass Tags
 
 ### 1. Label-Free Quantification (LFQ)
 
@@ -105,10 +106,11 @@ Additional subsections are included to cover further topics for each flavour.
 - [Incorporation rate testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/SILAC_incorporation.html)
 
 
+## Extended materials
 
+- [Phosphoproteomics using TMT](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT_phospho.html)
 
-
-
+- [Phosphoproteomics statistical testing](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT_phospho_stats.html)
 
 
 ## Additional resources
