@@ -43,7 +43,7 @@ phospho_sites <- readRDS(here('results/phospho_sites.rds'))
 
 
 Below, we identify the total peptides that overlap each phosphosite. Note that each phosphosite may intersect multiple total peptides (due to missed cleavages) and each total peptide may intersect multiple phosphosites (due to multiple phosphosites per peptide).
-```{r}
+```{r, warning=FALSE}
 phospho_f <- phospho_sites %>% fData() %>% tibble::rownames_to_column('ID')
 total_f <- total %>% fData() %>% tibble::rownames_to_column('ID')
 
@@ -105,7 +105,7 @@ Inspect the combined quantification matrix.
 ```{r}
 head(all_combined_exprs) #
 ```
-
+We also need to create feature data and phenotype data (experimental information) for our combined quantification matrix. From these, we can then create an MSnSet to hold all the combined quantification data.
 ```{r}
 all_combined_fdata <- fData(phospho_sites[rownames(all_combined_exprs),])[
   ,c('Master.Protein.Accessions', 'ptm_position')]
@@ -136,7 +136,9 @@ pData(pairwise_comparison_combined_res)
 Below, we perform the limma analysis. First though, some clarification on the model we're using.
 
 We have two experimental variables:
+
 - type: phospho or total
+
 - condition: 1x or 2x spike in
 
 ```{r}
@@ -145,11 +147,17 @@ condition <- factor(pData(pairwise_comparison_combined_res)$condition, levels=1:
 print(paste(type, condition))
 ```
 
-When we use an model with the terms type, condition and type:condition, the interaction term captures the difference between the observed data and the simple additive model when the abundance is dependent upon just the separate effect of the type and condition variables and there is no combinatorial effect.
+A simple additive model would estimate independent effects for the `type` and `condition` variables
+
+
 ```{r}
 # model without interaction term
 print(model.matrix(~type+condition))
+```
 
+If we want to explore a possible combinatorial effect, we need to also include a `type:condition` interaction term. In our case, this captures the difference in abundance for phosphopeptides between the conditions, which is specific for phosphopeptides and not seen in the unmodified peptides.
+
+```{r}
 # model with an interaction term
 print(model.matrix(~type+condition+type:condition))
 
