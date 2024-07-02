@@ -9,7 +9,12 @@ output:
   pdf_document: default
 bibliography: bib.json
 ---
-```{r, message=FALSE, warning=FALSE}
+
+### Load dependencies
+
+Load the required libraries.
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
 library(camprotR)
 library(MSnbase)
 library(ggplot2)
@@ -21,13 +26,23 @@ library(uniprotREST)
 ```
 
 
+### Preamble
+
+The correct approach for statistical testing for changes in phosphorylation will depend on the details of the experimental design. Here, we have quantified phospho and unmodified peptides, so we can identify changes in phosphorylation which are not explained by changes in the unmodified protein, e.g changes in the proportion of the protein that is phosphorylated. 
+
+To acheive this, we will jointly model the phospho and unmodified peptides which overlap each phosphosite, using a linear model with an interaction term.
+
+### Input data
+
+We start by reading in the MSnSets created in the previous notebook [QC PSM-level quantification, filtering and summarisation to protein-level abundance](https://mrctoxbioinformatics.github.io/Proteomics_data_analysis/Markdowns/TMT_phospho.html)
+
 ```{r}
 total <- readRDS(here('results/total.rds'))
 phospho_sites <- readRDS(here('results/phospho_sites.rds'))
 ```
 
 
-Below, we identify the total peptides that overlap each phosphosite. Note that each phosphosite may intersect multiple total peptides (due to missed cleavages) and each total peptide may intersect multiple phosphosites (due to multiple phosphosites per peptide). The code chunk takes a while to run..
+Below, we identify the total peptides that overlap each phosphosite. Note that each phosphosite may intersect multiple total peptides (due to missed cleavages) and each total peptide may intersect multiple phosphosites (due to multiple phosphosites per peptide).
 ```{r}
 phospho_f <- phospho_sites %>% fData() %>% tibble::rownames_to_column('ID')
 total_f <- total %>% fData() %>% tibble::rownames_to_column('ID')
@@ -85,6 +100,7 @@ colnames(all_combined_exprs) <- c(paste0(colnames(phospho_sites), '_phospho'),
                                   paste0(colnames(total), '_total'))
 
 ```
+
 Inspect the combined quantification matrix. 
 ```{r}
 head(all_combined_exprs) #
@@ -108,19 +124,42 @@ pData(all_combined_res)
 ```
 
 Below, we subset to the first 2 'conditions', where condition 1 = tags 1-4 (x1 phospho; x1 total) and condition 2 = tags 5-7 (x6 phospho; x2 total). 
-The ground truth for the difference between the first 4 tags and the next 3 is therefore a 3-fold increase in phosphorylation for the yeast proteins and reduced phosphorylation for the human proteins. For the human proteins, given the amounts of spike in yeast and balancing human proteins to make up the labelled material, we expect a 30% drop in phosphorylation.
+The ground truth for the difference between condition 2 and condition 1 is therefore a 3-fold increase in phosphorylation for the yeast proteins and reduced phosphorylation for the human proteins. For the human proteins, given the amounts of spike in yeast and balancing human proteins to make up the labelled material, we expect a 30% drop in phosphorylation.
 ```{r}
 pairwise_comparison_combined_res <- all_combined_res[,pData(all_combined_res)$condition %in% 1:2]
 pData(pairwise_comparison_combined_res)
 ```
 
-Below, we perform the limma analysis
-```{r}
-dat <- exprs(pairwise_comparison_combined_res) %>% log(base=2)
+### Run limma
 
+
+Below, we perform the limma analysis. First though, some clarification on the model we're using.
+
+We have two experimental variables:
+- type: phospho or total
+- condition: 1x or 2x spike in
+
+```{r}
 type <- factor(pData(pairwise_comparison_combined_res)$type, level=c('total', 'phospho'))
 condition <- factor(pData(pairwise_comparison_combined_res)$condition, levels=1:2)
+print(paste(type, condition))
+```
 
+When we use an model with the terms type, condition and type:condition, the interaction term captures the difference between the observed data and the simple additive model when the abundance is dependent upon just the separate effect of the type and condition variables and there is no combinatorial effect.
+```{r}
+# model without interaction term
+print(model.matrix(~type+condition))
+
+# model with an interaction term
+print(model.matrix(~type+condition+type:condition))
+
+```
+
+Below, we run the linear modeling. For more details about `limma`, see the
+[Differential abundance testing for TMT proteomics]('~/git_repos/bioinf_training/Proteomics.data.analysis/Markdowns/Stats_diff_abundance_TMT.Rmd') notebook. 
+
+```{r}
+dat <- exprs(pairwise_comparison_combined_res) %>% log(base=2)
 study.design <- model.matrix(~type*condition)
 
 fit <- lmFit(dat, study.design)
@@ -132,7 +171,7 @@ limma.results$sigma <- fit$sigma
 ```
 
 
-We would like to add information about the species to make sure the fold-changes are in the expected direction
+We would like to add information about the species to make sure the fold-changes are in the expected direction. We'll use the `uniprotREST` package to query 
 ```{r}
 limma.results$protein <- rownames(limma.results) %>%
   strsplit(split='_') %>%
@@ -147,6 +186,7 @@ species_res <-  uniprot_map(
                         "Saccharomyces cerevisiae (strain ATCC 204508 / S288c) (Baker's yeast)"="S.cerevisiae",
                         "Homo sapiens (Human)"="H.sapiens"))
 ```
+Below, we plot the limma results using a volcano plot, with two panels, one for each species.
 
 ```{r}
 limma.results %>%
@@ -160,4 +200,8 @@ limma.results %>%
   ylab('-log10(p-value)') +
   scale_fill_manual(values=c('grey90', get_cat_palette(2)[2]), name='FDR < 1%')
 ```
-OK, so the direction of change is as expected (reduced for human, increased for yeast), but only a subset of the fold-changes reach a 1% FDR threshold for significance.
+
+
+The direction of change is as expected (reduced for human, increased for yeast), but only a subset of the fold-changes reach a 1% FDR threshold for significance. The fold-changes are appoximately what we would expect too: human phosphosites should be reduced by 30% = `r round(log2(0.7), 2)` on a log2 scale and the yeast phosphosites should be increased by 3-fold = `r round(log2(3), 2)` on a log2 scale.
+
+
