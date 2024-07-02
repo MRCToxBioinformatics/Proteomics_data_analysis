@@ -51,7 +51,7 @@ Alongside the published total data shown above, we also performed a yeast/human 
 
 
 |Tag   | Total | Phopsho | Ratio |
-|------|-------|---------|-------|
+|:----:|:-----:|:-------:|:-----:|
 | 126  |1x     |1x       |1      |
 | 127N |1x     |1x       |1      |
 | 127C |1x     |1x       |1      |
@@ -214,7 +214,7 @@ psm_res <- list('Total'=psm.total, 'Phospho'=psm.phospho)
 
 
 Below, we assess the quantification distributions. There are no clear outlier samples or any other concerns.
-```{r}
+```{r, warning=FALSE, fig.height=5, fig.width=7, fig.fullwidth=TRUE}
 for(x in names(psm_res)){
   
   p <- psm_res[[x]] %>% log(base=2) %>% plot_quant() +
@@ -237,7 +237,7 @@ We want to remove low Signal:Noise (S:N) PSMs, since the quantification values w
 
 We use Note that where the signal:noise > 10, there are far fewer missing values.
 
-```{r, fig.height=5, fig.width=7, fig.fullwidth=TRUE, fig.cap="Missing values per PSM, in relation to the signal:noise ratio"}
+```{r, fig.height=5, fig.width=7, fig.fullwidth=TRUE}
 for(x in names(psm_res)){
   
     p <- psm_res[[x]] %>% plot_missing_SN(bins=40) +
@@ -269,7 +269,7 @@ psm_filt_sn_int <- psm_res %>% lapply(function(x){
 ```
 
 
-Below, we will also filter our PSMs using the Delta.Score, e.g the difference between the score for the top two hits. Where this is the difference between the top score in the MS2 spectrum matching and the second top score. For a mixed species sample, it's likely some peptides will be difficult to assign to the protein from the correct species, so we are being extra cautious here. For a typical phospho TMT proteomics experiment, it would likely be reasonable to use a more relaxed filter above for the interference (e.g 50%) and to not filter by Delta Score at all.
+Below, we will also filter our PSMs using the Delta.Score which is the difference between the top score in the MS2 spectrum matching and the second top score. For a mixed species sample, it's likely some peptides will be difficult to assign to the protein from the correct species, so we are being extra cautious here. For a typical TMT phosphoproteomics experiment, it would likely be reasonable to use a more relaxed filter for the interference in the code chunk above (e.g 50%)and to not filter by Delta Score at all.
 
 ```{r}
 

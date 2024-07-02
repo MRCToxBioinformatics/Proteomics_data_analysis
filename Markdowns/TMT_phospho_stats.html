@@ -496,9 +496,6 @@ for(phospho_id in phospho_f$ID){
   
   phospho_peptide_to_total_peptides[[row$ID]] &lt;- total_peptide_ids
 }</code></pre>
-<pre><code>## Warning: NAs introduced by coercion
-## Warning: NAs introduced by coercion
-## Warning: NAs introduced by coercion</code></pre>
 <p>Now, how many overlapping features. Note that for the phospho and
 total to be considered intersecting, there must be at least one total
 peptide which overlaps the phosphosite. Out of the 666 phosphosites,
@@ -572,6 +569,9 @@ colnames(all_combined_exprs) &lt;- c(paste0(colnames(phospho_sites), &#39;_phosp
 ## O60841_164                7.4      12.7
 ## O60841_214               63.7      56.5
 ## O75554_258|262           81.6     102.5</code></pre>
+<p>We also need to create feature data and phenotype data (experimental
+information) for our combined quantification matrix. From these, we can
+then create an MSnSet to hold all the combined quantification data.</p>
 <pre class="r"><code>all_combined_fdata &lt;- fData(phospho_sites[rownames(all_combined_exprs),])[
   ,c(&#39;Master.Protein.Accessions&#39;, &#39;ptm_position&#39;)]
 all_combined_fdata$n_total &lt;- sapply(rownames(all_combined_exprs),
@@ -644,19 +644,19 @@ pData(pairwise_comparison_combined_res)</code></pre>
 <h3>Run limma</h3>
 <p>Below, we perform the limma analysis. First though, some
 clarification on the model we’re using.</p>
-<p>We have two experimental variables: - type: phospho or total -
-condition: 1x or 2x spike in</p>
+<p>We have two experimental variables:</p>
+<ul>
+<li><p>type: phospho or total</p></li>
+<li><p>condition: 1x or 2x spike in</p></li>
+</ul>
 <pre class="r"><code>type &lt;- factor(pData(pairwise_comparison_combined_res)$type, level=c(&#39;total&#39;, &#39;phospho&#39;))
 condition &lt;- factor(pData(pairwise_comparison_combined_res)$condition, levels=1:2)
 print(paste(type, condition))</code></pre>
 <pre><code>##  [1] &quot;phospho 1&quot; &quot;phospho 1&quot; &quot;phospho 1&quot; &quot;phospho 1&quot; &quot;phospho 2&quot; &quot;phospho 2&quot;
 ##  [7] &quot;phospho 2&quot; &quot;total 1&quot;   &quot;total 1&quot;   &quot;total 1&quot;   &quot;total 1&quot;   &quot;total 2&quot;  
 ## [13] &quot;total 2&quot;   &quot;total 2&quot;</code></pre>
-<p>When we use an model with the terms type, condition and
-type:condition, the interaction term captures the difference between the
-observed data and the simple additive model when the abundance is
-dependent upon just the separate effect of the type and condition
-variables and there is no combinatorial effect.</p>
+<p>A simple additive model would estimate independent effects for the
+<code>type</code> and <code>condition</code> variables</p>
 <pre class="r"><code># model without interaction term
 print(model.matrix(~type+condition))</code></pre>
 <pre><code>##    (Intercept) typephospho condition2
@@ -682,6 +682,11 @@ print(model.matrix(~type+condition))</code></pre>
 ## 
 ## attr(,&quot;contrasts&quot;)$condition
 ## [1] &quot;contr.treatment&quot;</code></pre>
+<p>If we want to explore a possible combinatorial effect, we need to
+also include a <code>type:condition</code> interaction term. In our
+case, this captures the difference in abundance for phosphopeptides
+between the conditions, which is specific for phosphopeptides and not
+seen in the unmodified peptides.</p>
 <pre class="r"><code># model with an interaction term
 print(model.matrix(~type+condition+type:condition))</code></pre>
 <pre><code>##    (Intercept) typephospho condition2 typephospho:condition2
